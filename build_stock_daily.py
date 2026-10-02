@@ -310,31 +310,6 @@ def build_excel(model, stock_agg, stock_raw, bkg, out: Path, override_date: dt.d
             zones.append((zname, zlabel, zlocs))
 
     r = 3
-    for zname, zlabel, zlocs in zones:
-        r += 1   # blank spacer row before each zone band - user request
-        band = sm.cell(r, 1, zlabel)
-        band.font = Font(name="Calibri", size=11, bold=True, color=NAVY)
-        band.alignment = Alignment(horizontal="left", vertical="center")
-        sm.merge_cells(start_row=r, start_column=1, end_row=r, end_column=last_col)
-        for cc in range(1, last_col + 1):
-            sm.cell(r, cc).fill = PatternFill("solid", fgColor=ZONE_BAND_FILL)
-        sm.row_dimensions[r].height = 15
-        r += 2   # blank spacer row after the band too, before the first block - user request
-        top0 = r
-        gaps = LAYOUT_GAPS.get(zname, {})
-        padded = []
-        for loc in zlocs:
-            padded.extend([None] * gaps.get(loc["key"], 0))
-            padded.append(loc)
-        for i, loc in enumerate(padded):
-            if loc is None:
-                continue
-            lane = i % 3
-            grp = i // 3
-            top = top0 + grp * BLOCK_H
-            _write_block(sm, loc, LANE_STARTS[lane], top, F, FB, thin, med)
-        r = top0 + ((len(padded) + 2) // 3) * BLOCK_H
-
     if no_bkg:
         r += 1
         band = sm.cell(r, 1, "Stock on hand only  —  no active bookings this period")
@@ -375,6 +350,31 @@ def build_excel(model, stock_agg, stock_raw, bkg, out: Path, override_date: dt.d
                     top=med if rr == head_row else thin,
                     bottom=med if rr == bot_row else thin,
                 )
+
+    for zname, zlabel, zlocs in zones:
+        r += 1   # blank spacer row before each zone band - user request
+        band = sm.cell(r, 1, zlabel)
+        band.font = Font(name="Calibri", size=11, bold=True, color=NAVY)
+        band.alignment = Alignment(horizontal="left", vertical="center")
+        sm.merge_cells(start_row=r, start_column=1, end_row=r, end_column=last_col)
+        for cc in range(1, last_col + 1):
+            sm.cell(r, cc).fill = PatternFill("solid", fgColor=ZONE_BAND_FILL)
+        sm.row_dimensions[r].height = 15
+        r += 2   # blank spacer row after the band too, before the first block - user request
+        top0 = r
+        gaps = LAYOUT_GAPS.get(zname, {})
+        padded = []
+        for loc in zlocs:
+            padded.extend([None] * gaps.get(loc["key"], 0))
+            padded.append(loc)
+        for i, loc in enumerate(padded):
+            if loc is None:
+                continue
+            lane = i % 3
+            grp = i // 3
+            top = top0 + grp * BLOCK_H
+            _write_block(sm, loc, LANE_STARTS[lane], top, F, FB, thin, med)
+        r = top0 + ((len(padded) + 2) // 3) * BLOCK_H
 
     for rr in range(1, r + 2):
         sm.row_dimensions[rr].height = 13 if sm.row_dimensions[rr].height is None else sm.row_dimensions[rr].height
@@ -596,7 +596,7 @@ def build_html(model, out: Path):
             t = l["types"]
             tds = "".join(f"<td class='{cls(d)}'>{t[d]['stock']}</td>" for d in active_types)
             rows.append(f"<tr><th>{html.escape(l['zone'])}</th><th>{html.escape(l['code'])}</th>{tds}</tr>")
-        cards.append(f"""
+        cards.insert(0, f"""
     <section class="zone nobk">
       <h2>Stock on hand only <small>no active bookings this period</small></h2>
       <table class="nobk-table"><thead><tr><th>Zone</th><th>Location</th>{head}</tr></thead>
