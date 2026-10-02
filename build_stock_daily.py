@@ -35,6 +35,7 @@ SIZE2DISP = {"22GP": "20'GP", "42GP": "40'GP", "45GP": "40'HC", "22RE": "20'RE",
 DISP_ORDER = ["20'GP", "40'GP", "40'HC", "20'RE", "40'RH", "20'OT", "40'OT", "20'FR", "40'FR"]
 RE_DISP = {"20'RE", "40'RH"}
 OTFR_DISP = {"20'OT", "40'OT", "20'FR", "40'FR"}
+DISP2SIZE = {v: k for k, v in SIZE2DISP.items()}   # 20'GP -> 22GP, ... (headers of the no-booking table)
 
 # confirmed conventions
 MERGES = {"BKK04": "BKK01"}                     # relabel -> merged block
@@ -324,10 +325,15 @@ def build_excel(model, stock_agg, stock_raw, bkg, out: Path, override_date: dt.d
         sm.cell(head_row, 1, "Zone").font = FB
         sm.cell(head_row, 2, "Location").font = FB
         for i, disp in enumerate(DISP_ORDER):
-            hc = sm.cell(head_row, 3 + i, disp)
+            hc = sm.cell(head_row, 3 + i, DISP2SIZE[disp])
             col = RE_FONT if disp in RE_DISP else OTFR_FONT if disp in OTFR_DISP else NAVY
             hc.font = Font(name="Calibri", size=11, bold=True, color=col)
             hc.alignment = Alignment(horizontal="center")
+        # Total sits in L:M merged - column L is the 2.3-wide lane gap, too narrow on its own
+        tc = sm.cell(head_row, 12, "Total")
+        tc.font = FB
+        tc.alignment = Alignment(horizontal="center")
+        sm.merge_cells(start_row=head_row, start_column=12, end_row=head_row, end_column=13)
         r += 1
         top_row = r
         for loc in no_bkg:
@@ -339,14 +345,18 @@ def build_excel(model, stock_agg, stock_raw, bkg, out: Path, override_date: dt.d
                 cell.alignment = Alignment(horizontal="center")
             for cc in range(1, last_col + 1):
                 sm.cell(r, cc).fill = PatternFill("solid", fgColor=STOCK_BG)
+            tot = sm.cell(r, 12, f"=SUM(C{r}:K{r})")
+            tot.font = FB
+            tot.alignment = Alignment(horizontal="center")
+            sm.merge_cells(start_row=r, start_column=12, end_row=r, end_column=13)
             r += 1
         bot_row = r - 1
         for rr in range(head_row, bot_row + 1):
-            for cc in range(1, 11 + 1):
+            for cc in range(1, 13 + 1):
                 cell = sm.cell(rr, cc)
                 cell.border = Border(
                     left=med if cc == 1 else thin,
-                    right=med if cc == 11 else thin,
+                    right=med if cc == 13 else thin,
                     top=med if rr == head_row else thin,
                     bottom=med if rr == bot_row else thin,
                 )
@@ -589,12 +599,12 @@ def build_html(model, out: Path):
     </section>""")
 
     if no_bkg:
-        active_types = [d for d in DISP_ORDER if any(l["types"][d]["stock"] for l in no_bkg)] or ["20'GP"]
-        head = "".join(f"<th class='{cls(d)}'>{html.escape(d)}</th>" for d in active_types)
+        head = "".join(f"<th class='{cls(d)}'>{DISP2SIZE[d]}</th>" for d in DISP_ORDER) + "<th>Total</th>"
         rows = []
         for l in no_bkg:
             t = l["types"]
-            tds = "".join(f"<td class='{cls(d)}'>{t[d]['stock']}</td>" for d in active_types)
+            tds = "".join(f"<td class='{cls(d)}'>{t[d]['stock']}</td>" for d in DISP_ORDER)
+            tds += f"<td><b>{sum(t[d]['stock'] for d in DISP_ORDER)}</b></td>"
             rows.append(f"<tr><th>{html.escape(l['zone'])}</th><th>{html.escape(l['code'])}</th>{tds}</tr>")
         cards.insert(0, f"""
     <section class="zone nobk">
