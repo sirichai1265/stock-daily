@@ -5,3 +5,6 @@
 *.model.json
 input/
 [0-9]*-[0-9]*/
+
+# Published dashboard (GitHub Pages) - intentionally public, user-confirmed
+!docs/index.html

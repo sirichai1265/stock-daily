@@ -1,0 +1,138 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Daily Container Stock vs Booking · 2 Oct 2026</title>
+<style>
+:root{--navy:#0C2340;--re:#1F4E9C;--otfr:#7A4B12;--av:#FFF6C8;--neg:#C22A2A;--ink:#222a33;--mute:#5b6b7b;--line:#d5dde6;--card:#f3f5f8}
+*{box-sizing:border-box}body{margin:0;font:14px/1.45 "Segoe UI",Calibri,system-ui,sans-serif;color:var(--ink);background:#eef1f5}
+header{background:var(--navy);color:#fff;padding:18px 26px}
+header h1{margin:0;font-size:20px}header .sub{color:#c7d2e0;font-size:12.5px;margin-top:4px}
+.kpis{display:flex;gap:14px;flex-wrap:wrap;padding:16px 26px;background:#fff;border-bottom:1px solid var(--line)}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 16px;min-width:150px}
+.kpi b{display:block;font-size:24px;color:var(--navy)}.kpi span{font-size:11px;color:var(--mute)}
+.controls{padding:12px 26px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.controls button{border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12.5px}
+.controls button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.zone{padding:6px 26px 20px}.zone h2{font-size:15px;margin:14px 0 8px;color:var(--navy)}
+.zone h2 small{color:var(--mute);font-weight:normal;font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
+.nobk-table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:9px;overflow:hidden;font-size:12.5px}
+.nobk-table th,.nobk-table td{padding:7px 10px;text-align:center;border-bottom:1px solid #eef1f5}
+.nobk-table thead th{background:#6B7280;color:#fff;font-weight:700}
+.nobk-table tbody th{text-align:left;font-weight:600;color:var(--ink);white-space:nowrap}
+.nobk-table td.re{color:var(--re)}.nobk-table td.otfr{color:var(--otfr)}
+.card{background:#fff;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.chd{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:var(--navy);color:#fff}
+.chd .code{font-weight:700}
+.badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px}
+.badge.ok{background:#1E8E5A}.badge.watch{background:var(--neg)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{padding:4px 6px;text-align:center;border-bottom:1px solid #eef1f5}
+tbody th{text-align:left;font-weight:600;color:var(--mute);white-space:nowrap}
+thead th.re,td.re{color:var(--re)}thead th.otfr,td.otfr{color:var(--otfr)}
+tr.stockrow{background:var(--card)}tr.stockrow th{color:var(--ink)}
+tr.avrow{background:var(--av)}tr.avrow th{color:var(--ink)}
+td.neg{color:var(--neg);font-weight:700}
+.hide{display:none}
+footer{padding:14px 26px;color:var(--mute);font-size:11px}
+</style></head><body>
+<header><h1>Daily Container Stock vs Booking</h1>
+<div class="sub">Report date 2 Oct 2026 · empty stock on hand vs outstanding bookings · all 9 container types</div></header>
+<div class="kpis">
+  <div class="kpi"><b>6165</b><span>total empty stock (all types)</span></div>
+  <div class="kpi"><b>379</b><span>total pending pickup (overdue)</span></div>
+  <div class="kpi"><b>5</b><span>locations with negative AV balance</span></div>
+  <div class="kpi"><b>BKK01+BKK04, BKK27, BKKY5, LCH27, LCHY5</b><span>watch list</span></div>
+</div>
+<div class="controls">
+  <span style="font-size:12px;color:var(--mute)">Zone:</span>
+  <button data-f="zone" data-v="all" class="on">All</button>
+  <button data-f="zone" data-v="BKK">BKK</button>
+  <button data-f="zone" data-v="LCH">LCH</button>
+  <span style="font-size:12px;color:var(--mute);margin-left:10px">Show:</span>
+  <button data-f="badge" data-v="all" class="on">All</button>
+  <button data-f="badge" data-v="watch">Watch only</button>
+</div>
+
+    <section class="zone" data-zone="BKK">
+      <h2>BKK <small>Bangkok area depots</small></h2>
+      <div class="grid">
+      <div class="card" data-zone="BKK" data-badge="ok">
+        <div class="chd"><span class="code">BKK25</span>
+          <span class="badge ok">OK</span></div>
+        <table><thead><tr><th></th><th class='gp'>20&#x27;GP</th><th class='gp'>40&#x27;HC</th></tr></thead><tbody><tr class='stockrow'><th>Stock empty</th><td class='gp'>696</td><td class='gp'>819</td></tr><tr class=''><th>Pending pickup · WK40</th><td class='gp'>42</td><td class='gp'>25</td></tr><tr class=''><th>WK40 28 Sep–3 Oct</th><td class='gp'>28</td><td class='gp'>3</td></tr><tr class='avrow'><th>AV bal · 3 Oct</th><td class='gp'>626</td><td class='gp'>791</td></tr><tr class=''><th>WK41 5 Oct–10 Oct</th><td class='gp'>63</td><td class='gp'>32</td></tr><tr class='avrow'><th>AV bal · 10 Oct</th><td class='gp'>563</td><td class='gp'>759</td></tr><tr class=''><th>WK42 12 Oct–17 Oct</th><td class='gp'>47</td><td class='gp'>17</td></tr><tr class='avrow'><th>AV bal · 17 Oct</th><td class='gp'>516</td><td class='gp'>742</td></tr><tr class=''><th>WK43 19 Oct–24 Oct</th><td class='gp'>0</td><td class='gp'>0</td></tr><tr class='avrow'><th>AV bal · 24 Oct</th><td class='gp'>516</td><td class='gp'>742</td></tr></tbody></table>
+      </div>
+      <div class="card" data-zone="BKK" data-badge="watch">
+        <div class="chd"><span class="code">BKK01+BKK04</span>
+          <span class="badge watch">WATCH</span></div>
+        <table><thead><tr><th></th><th class='gp'>20&#x27;GP</th><th class='gp'>40&#x27;HC</th></tr></thead><tbody><tr class='stockrow'><th>Stock empty</th><td class='gp'>11</td><td class='gp'>34</td></tr><tr class=''><th>Pending pickup · WK40</th><td class='gp'>1</td><td class='gp'>11</td></tr><tr class=''><th>WK40 28 Sep–3 Oct</th><td class='gp'>3</td><td class='gp'>11</td></tr><tr class='avrow'><th>AV bal · 3 Oct</th><td class='gp'>7</td><td class='gp'>12</td></tr><tr class=''><th>WK41 5 Oct–10 Oct</th><td class='gp'>6</td><td class='gp'>22</td></tr><tr class='avrow'><th>AV bal · 10 Oct</th><td class='gp'>1</td><td class='gp neg'>-10</td></tr><tr class=''><th>WK42 12 Oct–17 Oct</th><td class='gp'>21</td><td class='gp'>35</td></tr><tr class='avrow'><th>AV bal · 17 Oct</th><td class='gp neg'>-20</td><td class='gp neg'>-45</td></tr><tr class=''><th>WK43 19 Oct–24 Oct</th><td class='gp'>0</td><td class='gp'>0</td></tr><tr class='avrow'><th>AV bal · 24 Oct</th><td class='gp neg'>-20</td><td class='gp neg'>-45</td></tr></tbody></table>
+      </div>
+      <div class="card" data-zone="BKK" data-badge="ok">
+        <div class="chd"><span class="code">BKK02</span>
+          <span class="badge ok">OK</span></div>
+        <table><thead><tr><th></th><th class='gp'>20&#x27;GP</th><th class='gp'>40&#x27;HC</th><th class='re'>20&#x27;RE</th></tr></thead><tbody><tr class='stockrow'><th>Stock empty</th><td class='gp'>44</td><td class='gp'>8</td><td class='re'>6</td></tr><tr class=''><th>Pending pickup · WK40</th><td class='gp'>0</td><td class='gp'>0</td><td class='re'>0</td></tr><tr class=''><th>WK40 28 Sep–3 Oct</th><td class='gp'>0</td><td class='gp'>0</td><td class='re'>0</td></tr><tr class='avrow'><th>AV bal · 3 Oct</th><td class='gp'>44</td><td class='gp'>8</td><td class='re'>6</td></tr><tr class=''><th>WK41 5 Oct–10 Oct</th><td class='gp'>4</td><td class='gp'>2</td><td class='re'>0</td></tr><tr class='avrow'><th>AV bal · 10 Oct</th><td class='gp'>40</td><td class='gp'>6</td><td class='re'>6</td></tr><tr class=''><th>WK42 12 Oct–17 Oct</th><td class='gp'>7</td><td class='gp'>1</td><td class='re'>0</td></tr><tr class='avrow'><th>AV bal · 17 Oct</th><td class='gp'>33</td><td class='gp'>5</td><td class='re'>6</td></tr><tr class=''><th>WK43 19 Oct–24 Oct</th><td class='gp'>0</td><td class='gp'>0</td><td class='re'>0</td></tr><tr class='avrow'><th>AV bal · 24 Oct</th><td class='gp'>33</td><td class='gp'>5</td><td class='re'>6</td></tr></tbody></table>
+      </div>
+      <div class="card" data-zone="BKK" data-badge="watch">
+        <div class="chd"><span class="code">BKK27</span>
+          <span class="badge watch">WATCH</span></div>
+        <table><thead><tr><th></th><th class='gp'>20&#x27;GP</th><th class='gp'>40&#x27;GP</th><th class='gp'>40&#x27;HC</th><th class='re'>20&#x27;RE</th><th class='re'>40&#x27;RH</th></tr></thead><tbody><tr class='stockrow'><th>Stock empty</th><td class='gp'>747</td><td class='gp'>4</td><td class='gp'>520</td><td class='re'>32</td><td class='re'>41</td></tr><tr class=''><th>Pending pickup · WK40</th><td class='gp'>15</td><td class='gp'>0</td><td class='gp'>58</td><td class='re'>0</td><td class='re'>8</td></tr><tr class=''><th>WK40 28 Sep–3 Oct</th><td class='gp'>27</td><td class='gp'>0</td><td class='gp'>62</td><td class='re'>2</td><td class='re'>3</td></tr><tr class='avrow'><th>AV bal · 3 Oct</th><td class='gp'>705</td><td class='gp'>4</td><td class='gp'>400</td><td class='re'>30</td><td class='re'>30</td></tr><tr class=''><th>WK41 5 Oct–10 Oct</th><td class='gp'>175</td><td class='gp'>0</td><td class='gp'>137</td><td class='re'>3</td><td class='re'>24</td></tr><tr class='avrow'><th>AV bal · 10 Oct</th><td class='gp'>530</td><td class='gp'>4</td><td class='gp'>263</td><td class='re'>27</td><td class='re'>6</td></tr><tr class=''><th>WK42 12 Oct–17 Oct</th><td class='gp'>179</td><td class='gp'>0</td><td class='gp'>157</td><td class='re'>2</td><td class='re'>12</td></tr><tr class='avrow'><th>AV bal · 17 Oct</th><td class='gp'>351</td><td class='gp'>4</td><td class='gp'>106</td><td class='re'>25</td><td class='re neg'>-6</td></tr><tr class=''><th>WK43 19 Oct–24 Oct</th><td class='gp'>0</td><td class='gp'>0</td><td class='gp'>0</td><td class='re'>0</td><td class='re'>0</td></tr><tr class='avrow'><th>AV bal · 24 Oct</th><td class='gp'>351</td><td class='gp'>4</td><td class='gp'>106</td><td class='re'>25</td><td class='re neg'>-6</td></tr></tbody></table>
+      </div>
+      <div class="card" data-zone="BKK" data-badge="ok">
+        <div class="chd"><span class="code">LCH55</span>
+          <span class="badge ok">OK</span></div>
+        <table><thead><tr><th></th><th class='gp'>40&#x27;HC</th></tr></thead><tbody><tr class='stockrow'><th>Stock empty</th><td class='gp'>14</td></tr><tr class=''><th>Pending pickup · WK40</th><td class='gp'>0</td></tr><tr class=''><th>WK40 28 Sep–3 Oct</th><td class='gp'>0</td></tr><tr class='avrow'><th>AV bal · 3 Oct</th><td class='gp'>14</td></tr><tr class=''><th>WK41 5 Oct–10 Oct</th><td class='gp'>0</td></tr><tr class='avrow'><th>AV bal · 10 Oct</th><td class='gp'>14</td></tr><tr class=''><th>WK42 12 Oct–17 Oct</th><td class='gp'>0</td></tr><tr class='avrow'><th>AV bal · 17 Oct</th><td class='gp'>14</td></tr><tr class=''><th>WK43 19 Oct–24 Oct</th><td class='gp'>0</td></tr><tr class='avrow'><th>AV bal · 24 Oct</th><td class='gp'>14</td></tr></tbody></table>
+      </div>
+      <div class="card" data-zone="BKK" data-badge="watch">
+        <div class="chd"><span class="code">BKKY5</span>
+          <span class="badge watch">WATCH</span></div>
+        <table><thead><tr><th></th><th class='re'>20&#x27;RE</th></tr></thead><tbody><tr class='stockrow'><th>Stock empty</th><td class='re'>0</td></tr><tr class=''><th>Pending pickup · WK40</th><td class='re'>0</td></tr><tr class=''><th>WK40 28 Sep–3 Oct</th><td class='re'>0</td></tr><tr class='avrow'><th>AV bal · 3 Oct</th><td class='re'>0</td></tr><tr class=''><th>WK41 5 Oct–10 Oct</th><td class='re'>0</td></tr><tr class='avrow'><th>AV bal · 10 Oct</th><td class='re'>0</td></tr><tr class=''><th>WK42 12 Oct–17 Oct</th><td class='re'>1</td></tr><tr class='avrow'><th>AV bal · 17 Oct</th><td class='re neg'>-1</td></tr><tr class=''><th>WK43 19 Oct–24 Oct</th><td class='re'>0</td></tr><tr class='avrow'><th>AV bal · 24 Oct</th><td class='re neg'>-1</td></tr></tbody></table>
+      </div></div>
+    </section>
+    <section class="zone" data-zone="LCH">
+      <h2>LCH <small>Laem Chabang area depots</small></h2>
+      <div class="grid">
+      <div class="card" data-zone="LCH" data-badge="watch">
+        <div class="chd"><span class="code">LCH27</span>
+          <span class="badge watch">WATCH</span></div>
+        <table><thead><tr><th></th><th class='gp'>20&#x27;GP</th><th class='gp'>40&#x27;HC</th><th class='re'>20&#x27;RE</th><th class='re'>40&#x27;RH</th></tr></thead><tbody><tr class='stockrow'><th>Stock empty</th><td class='gp'>877</td><td class='gp'>267</td><td class='re'>7</td><td class='re'>49</td></tr><tr class=''><th>Pending pickup · WK40</th><td class='gp'>62</td><td class='gp'>27</td><td class='re'>0</td><td class='re'>6</td></tr><tr class=''><th>WK40 28 Sep–3 Oct</th><td class='gp'>6</td><td class='gp'>10</td><td class='re'>0</td><td class='re'>19</td></tr><tr class='avrow'><th>AV bal · 3 Oct</th><td class='gp'>809</td><td class='gp'>230</td><td class='re'>7</td><td class='re'>24</td></tr><tr class=''><th>WK41 5 Oct–10 Oct</th><td class='gp'>45</td><td class='gp'>42</td><td class='re'>1</td><td class='re'>21</td></tr><tr class='avrow'><th>AV bal · 10 Oct</th><td class='gp'>764</td><td class='gp'>188</td><td class='re'>6</td><td class='re'>3</td></tr><tr class=''><th>WK42 12 Oct–17 Oct</th><td class='gp'>26</td><td class='gp'>37</td><td class='re'>3</td><td class='re'>20</td></tr><tr class='avrow'><th>AV bal · 17 Oct</th><td class='gp'>738</td><td class='gp'>151</td><td class='re'>3</td><td class='re neg'>-17</td></tr><tr class=''><th>WK43 19 Oct–24 Oct</th><td class='gp'>0</td><td class='gp'>0</td><td class='re'>0</td><td class='re'>0</td></tr><tr class='avrow'><th>AV bal · 24 Oct</th><td class='gp'>738</td><td class='gp'>151</td><td class='re'>3</td><td class='re neg'>-17</td></tr></tbody></table>
+      </div>
+      <div class="card" data-zone="LCH" data-badge="ok">
+        <div class="chd"><span class="code">LCH28</span>
+          <span class="badge ok">OK</span></div>
+        <table><thead><tr><th></th><th class='gp'>20&#x27;GP</th><th class='gp'>40&#x27;HC</th></tr></thead><tbody><tr class='stockrow'><th>Stock empty</th><td class='gp'>28</td><td class='gp'>21</td></tr><tr class=''><th>Pending pickup · WK40</th><td class='gp'>4</td><td class='gp'>5</td></tr><tr class=''><th>WK40 28 Sep–3 Oct</th><td class='gp'>2</td><td class='gp'>1</td></tr><tr class='avrow'><th>AV bal · 3 Oct</th><td class='gp'>22</td><td class='gp'>15</td></tr><tr class=''><th>WK41 5 Oct–10 Oct</th><td class='gp'>3</td><td class='gp'>0</td></tr><tr class='avrow'><th>AV bal · 10 Oct</th><td class='gp'>19</td><td class='gp'>15</td></tr><tr class=''><th>WK42 12 Oct–17 Oct</th><td class='gp'>0</td><td class='gp'>0</td></tr><tr class='avrow'><th>AV bal · 17 Oct</th><td class='gp'>19</td><td class='gp'>15</td></tr><tr class=''><th>WK43 19 Oct–24 Oct</th><td class='gp'>0</td><td class='gp'>0</td></tr><tr class='avrow'><th>AV bal · 24 Oct</th><td class='gp'>19</td><td class='gp'>15</td></tr></tbody></table>
+      </div>
+      <div class="card" data-zone="LCH" data-badge="watch">
+        <div class="chd"><span class="code">LCHY5</span>
+          <span class="badge watch">WATCH</span></div>
+        <table><thead><tr><th></th><th class='gp'>20&#x27;GP</th><th class='gp'>40&#x27;GP</th><th class='gp'>40&#x27;HC</th><th class='otfr'>20&#x27;OT</th><th class='otfr'>40&#x27;OT</th><th class='otfr'>20&#x27;FR</th><th class='otfr'>40&#x27;FR</th></tr></thead><tbody><tr class='stockrow'><th>Stock empty</th><td class='gp'>1043</td><td class='gp'>2</td><td class='gp'>793</td><td class='otfr'>0</td><td class='otfr'>2</td><td class='otfr'>3</td><td class='otfr'>1</td></tr><tr class=''><th>Pending pickup · WK40</th><td class='gp'>61</td><td class='gp'>0</td><td class='gp'>54</td><td class='otfr'>0</td><td class='otfr'>0</td><td class='otfr'>0</td><td class='otfr'>0</td></tr><tr class=''><th>WK40 28 Sep–3 Oct</th><td class='gp'>94</td><td class='gp'>0</td><td class='gp'>54</td><td class='otfr'>0</td><td class='otfr'>0</td><td class='otfr'>0</td><td class='otfr'>0</td></tr><tr class='avrow'><th>AV bal · 3 Oct</th><td class='gp'>888</td><td class='gp'>2</td><td class='gp'>685</td><td class='otfr'>0</td><td class='otfr'>2</td><td class='otfr'>3</td><td class='otfr'>1</td></tr><tr class=''><th>WK41 5 Oct–10 Oct</th><td class='gp'>160</td><td class='gp'>0</td><td class='gp'>163</td><td class='otfr'>0</td><td class='otfr'>0</td><td class='otfr'>1</td><td class='otfr'>1</td></tr><tr class='avrow'><th>AV bal · 10 Oct</th><td class='gp'>728</td><td class='gp'>2</td><td class='gp'>522</td><td class='otfr'>0</td><td class='otfr'>2</td><td class='otfr'>2</td><td class='otfr'>0</td></tr><tr class=''><th>WK42 12 Oct–17 Oct</th><td class='gp'>202</td><td class='gp'>0</td><td class='gp'>115</td><td class='otfr'>1</td><td class='otfr'>0</td><td class='otfr'>0</td><td class='otfr'>0</td></tr><tr class='avrow'><th>AV bal · 17 Oct</th><td class='gp'>526</td><td class='gp'>2</td><td class='gp'>407</td><td class='otfr neg'>-1</td><td class='otfr'>2</td><td class='otfr'>2</td><td class='otfr'>0</td></tr><tr class=''><th>WK43 19 Oct–24 Oct</th><td class='gp'>0</td><td class='gp'>0</td><td class='gp'>0</td><td class='otfr'>0</td><td class='otfr'>0</td><td class='otfr'>0</td><td class='otfr'>0</td></tr><tr class='avrow'><th>AV bal · 24 Oct</th><td class='gp'>526</td><td class='gp'>2</td><td class='gp'>407</td><td class='otfr neg'>-1</td><td class='otfr'>2</td><td class='otfr'>2</td><td class='otfr'>0</td></tr></tbody></table>
+      </div></div>
+    </section>
+    <section class="zone nobk">
+      <h2>Stock on hand only <small>no active bookings this period</small></h2>
+      <table class="nobk-table"><thead><tr><th>Zone</th><th>Location</th><th class='gp'>20&#x27;GP</th><th class='gp'>40&#x27;HC</th><th class='otfr'>20&#x27;OT</th></tr></thead>
+      <tbody><tr><th>LCH</th><th>LCH01</th><td class='gp'>1</td><td class='gp'>0</td><td class='otfr'>1</td></tr><tr><th>LCH</th><th>LCH04</th><td class='gp'>6</td><td class='gp'>19</td><td class='otfr'>0</td></tr><tr><th>LCH</th><th>LCH06</th><td class='gp'>46</td><td class='gp'>6</td><td class='otfr'>0</td></tr><tr><th>LCH</th><th>LCH07</th><td class='gp'>2</td><td class='gp'>14</td><td class='otfr'>0</td></tr><tr><th>LCH</th><th>LCHY2</th><td class='gp'>0</td><td class='gp'>1</td><td class='otfr'>0</td></tr></tbody></table>
+    </section>
+<section class="zone">
+  <h2>20'/40' &amp; TEU recap <small>empty stock on hand per location</small></h2>
+  <table class="nobk-table"><thead><tr><th>Location</th><th>20' count</th><th>40' count</th><th>Total units</th><th>Total TEUs</th></tr></thead>
+  <tbody><tr><th>BKK25</th><td>696</td><td>819</td><td>1515</td><td>2334</td></tr><tr><th>BKK01+BKK04</th><td>11</td><td>34</td><td>45</td><td>79</td></tr><tr><th>BKK02</th><td>50</td><td>8</td><td>58</td><td>66</td></tr><tr><th>BKK27</th><td>779</td><td>565</td><td>1344</td><td>1909</td></tr><tr><th>LCH55</th><td>0</td><td>14</td><td>14</td><td>28</td></tr><tr><th>BKKY5</th><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><th>LCH01</th><td>2</td><td>0</td><td>2</td><td>2</td></tr><tr><th>LCH04</th><td>6</td><td>19</td><td>25</td><td>44</td></tr><tr><th>LCH06</th><td>46</td><td>6</td><td>52</td><td>58</td></tr><tr><th>LCH07</th><td>2</td><td>14</td><td>16</td><td>30</td></tr><tr><th>LCH27</th><td>884</td><td>316</td><td>1200</td><td>1516</td></tr><tr><th>LCH28</th><td>28</td><td>21</td><td>49</td><td>70</td></tr><tr><th>LCHY2</th><td>0</td><td>1</td><td>1</td><td>2</td></tr><tr><th>LCHY5</th><td>1046</td><td>798</td><td>1844</td><td>2642</td></tr><tr style="font-weight:700;background:var(--av)"><th>TOTAL</th><td>3550</td><td>2615</td><td>6165</td><td>8780</td></tr></tbody></table>
+</section>
+<footer>Stock = empty containers in yard now (snapshot). Booking = pickups by TRAN DT.
+AV Balance = stock − pending − cumulative bookings through each week; negative = not enough empties.
+Generated from 2026-10-02 STAYING + BKG+PD.</footer>
+<script>
+var st={zone:'all',badge:'all'};
+document.querySelectorAll('.controls button').forEach(function(b){
+ b.onclick=function(){
+  st[b.dataset.f]=b.dataset.v;
+  document.querySelectorAll('.controls button[data-f="'+b.dataset.f+'"]').forEach(function(x){x.classList.toggle('on',x===b)});
+  document.querySelectorAll('.card').forEach(function(c){
+   var ok=(st.zone==='all'||c.dataset.zone===st.zone)&&(st.badge==='all'||c.dataset.badge===st.badge);
+   c.classList.toggle('hide',!ok);
+  });
+  document.querySelectorAll('.zone[data-zone]').forEach(function(z){
+   z.classList.toggle('hide',st.zone!=='all'&&z.dataset.zone!==st.zone);
+  });
+ };
+});
+</script>
+</body></html>
