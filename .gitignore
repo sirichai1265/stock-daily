@@ -1,0 +1,7 @@
+# Data files - not tracked (contains business data)
+*.xls
+*.xlsx
+*.html
+*.model.json
+input/
+[0-9]*-[0-9]*/
