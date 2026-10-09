@@ -432,6 +432,11 @@ def build_excel(model, stock_agg, stock_raw, bkg, out: Path, override_date: dt.d
         sm.row_dimensions[rr].height = 13 if sm.row_dimensions[rr].height is None else sm.row_dimensions[rr].height
     sm.sheet_view.showGridLines = False
     sm.freeze_panes = None   # unfrozen - user request
+    for rr in range(1, sm.max_row + 1):   # columns A / M / Y: everything left-aligned - user request
+        for cc in LANE_STARTS.values():
+            cell = sm.cell(rr, cc)
+            if cell.value is not None:
+                cell.alignment = Alignment(horizontal="left", vertical=cell.alignment.vertical)
 
     _write_teu_summary(wb, model)
     if empty_raw is not None and len(empty_raw):
