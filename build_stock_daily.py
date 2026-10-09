@@ -738,7 +738,7 @@ def build_html(model, out: Path):
         erows.append("<tr style='font-weight:700;background:var(--av)'><th>TOTAL</th><th></th><td></td><td></td>"
                      + "".join(f"<td>{ttl[c]}</td>" for c in SIZE_CODES)
                      + f"<td>{sum(g['total'] for g in er)}</td></tr>")
-        cards.append(f"""
+        cards.insert(0, f"""
     <section class="zone">
       <h2>Empty repo to TH <small>inbound empty containers by arrival date</small></h2>
       <table class="nobk-table"><thead><tr><th>ETA</th><th>Location</th><th>Vessel / Voy</th><th>POL</th>{ehead}</tr></thead>
