@@ -673,14 +673,6 @@ footer{{padding:14px 26px;color:var(--mute);font-size:11px}}
   <button data-f="badge" data-v="watch">Watch only</button>
 </div>
 {''.join(cards)}
-<section class="zone">
-  <h2>20'/40' &amp; TEU recap <small>empty stock on hand per location</small></h2>
-  <table class="nobk-table"><thead><tr><th>Location</th><th>20' count</th><th>40' count</th><th>Total units</th><th>Total TEUs</th></tr></thead>
-  <tbody>{''.join(
-      f"<tr{' style=\"font-weight:700;background:var(--av)\"' if code == 'TOTAL' else ''}>"
-      f"<th>{html.escape(code)}</th><td>{c20}</td><td>{c40}</td><td>{units}</td><td>{teu}</td></tr>"
-      for code, c20, c40, units, teu in teu_rows(model))}</tbody></table>
-</section>
 <footer>Stock = empty containers in yard now (snapshot). Booking = pickups by TRAN DT.
 AV Balance = stock − pending − cumulative bookings through each week; negative = not enough empties.
 Generated from {html.escape(model['date'])} STAYING + BKG+PD.</footer>
