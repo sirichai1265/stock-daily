@@ -72,7 +72,6 @@ ZONE_BAND_FILL = "FFFF00"    # zone band rows - user request 2026-09-23
 # code so it lands directly under an earlier block in the same lane (index i
 # and i+3 share a lane, one row-group apart) - user request
 LAYOUT_GAPS = {"LCH": {"LCHY5": 1}}
-SUBTITLE_BG = "E7ECF3"
 STOCK_BG = "F3F5F8"
 AV_BG = "FFF6C8"
 RE_FONT = "1F4E9C"
@@ -332,14 +331,8 @@ def build_excel(model, stock_agg, stock_raw, bkg, out: Path, override_date: dt.d
              + mn("Control!$B$1") + '&" "&YEAR(Control!$B$1)')
     sm.cell(1, 1, title).font = Font(name="Calibri", size=13, bold=True, color="FFFFFF")
     sm.merge_cells(start_row=1, start_column=1, end_row=1, end_column=last_col)
-    subv = ('="Report date  "&TEXT(Control!$B$1,"yyyy-mm-dd")&'
-            '"     Legend:  RE = reefer (blue)   OT/FR = special (brown)   '
-            'AV Balance = stock - cumulative booking (yellow; red = short)"')
-    sm.cell(2, 1, subv).font = Font(name="Calibri", size=10, italic=True, color="333333")
-    sm.merge_cells(start_row=2, start_column=2 - 1, end_row=2, end_column=last_col)
     for cc in range(1, last_col + 1):
         sm.cell(1, cc).fill = PatternFill("solid", fgColor=NAVY)
-        sm.cell(2, cc).fill = PatternFill("solid", fgColor=SUBTITLE_BG)
 
     mt = {l["code"]: l for l in model["locations"]}
     order = model["locations"]
@@ -352,7 +345,7 @@ def build_excel(model, stock_agg, stock_raw, bkg, out: Path, override_date: dt.d
         if zlocs:
             zones.append((zname, zlabel, zlocs))
 
-    r = 3
+    r = 2   # row 2 is blank (the "Report date / Legend" subtitle was dropped - user request)
     if no_bkg:
         r += 1
         band = sm.cell(r, 1, "Stock on hand only  —  no active bookings this period")
