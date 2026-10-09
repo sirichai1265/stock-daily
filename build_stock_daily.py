@@ -436,6 +436,10 @@ def build_excel(model, stock_agg, stock_raw, bkg, out: Path, override_date: dt.d
     _write_teu_summary(wb, model)
     if empty_raw is not None and len(empty_raw):
         _write_empty_repo(wb, model, empty_raw)
+    for w in wb.worksheets:
+        w.sheet_view.tabSelected = False
+    wb.active = wb.worksheets.index(sm)   # open on Summary - user request
+    sm.sheet_view.tabSelected = True
     wb.save(out)
 
 
@@ -568,7 +572,7 @@ def _write_block(sm, loc, c0, top, F, FB, thin, med):
     yard = YARD_NAME.get(label)
     tc = sm.cell(r_title, c0, f"{label}   {yard}" if yard else label)
     tc.font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
-    tc.alignment = Alignment(horizontal="center")
+    tc.alignment = Alignment(horizontal="left")
     sm.merge_cells(start_row=r_title, start_column=c0, end_row=r_title, end_column=c0 + 10)
     for cc in range(c0, c0 + 11):
         sm.cell(r_title, cc).fill = PatternFill("solid", fgColor=NAVY)
@@ -598,7 +602,7 @@ def _write_block(sm, loc, c0, top, F, FB, thin, med):
     sm.cell(r_t0, cN, f'="Booking on "&DAY(Control!$B$1)&" "&{mn("Control!$B$1")}').font = F
     sm.cell(r_rest, c0, "=Control!$A$4").font = F
     sm.cell(r_rest, cN,
-            f'=IF(Control!$B$9=Control!$C$4,DAY(Control!$B$9)&" "&{mn("Control!$B$9")},'
+            f'=IF(Control!$B$9=Control!$C$4,"Booking on "&DAY(Control!$B$9)&" "&{mn("Control!$B$9")},'
             f'"Booking on "&{range_label("Control!$B$9", "Control!$C$4")})').font = F
     sm.cell(r_av1, cN, f'="AV Balance till "&DAY(Control!$C$4)&" "&{mn("Control!$C$4")}').font = FB
     for rr, wkc, mon, sat in ((r_w2, "$A$5", "Control!$B$5", "Control!$C$5"),
