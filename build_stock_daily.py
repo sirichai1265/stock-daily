@@ -152,6 +152,47 @@ def load_all_bookings(paths: list[Path]) -> pd.DataFrame:
     return pd.concat(parts, ignore_index=True) if len(parts) > 1 else parts[0]
 
 
+SIZE_CODES = list(SIZE2DISP)   # 22GP, 42GP, 45GP, 22RE, 45RE, 22UT, 42UT, 22PC, 42PC
+
+
+def load_empty_repo(path: Path) -> pd.DataFrame:
+    """Inbound empty-repositioning list (the "EMPTY" export: move code VED, discharge at TH).
+
+    One row per container: Location = destination yard, EQ Date = arrival date,
+    plus Vessel/Voyage/P.O.L. A trailing summary row (no container no.) is dropped.
+    Returns columns Location, ETA, Vessel, Voyage, POL, Type (size code, e.g. 22GP).
+    """
+    df = pd.read_excel(path)
+    df = df[df["Container No."].notna() & df["Type Size"].notna() & df["Location"].notna()].copy()
+    df["Type"] = df["Type Size"].astype(str).str.strip().str.upper()
+    unknown = sorted(set(df["Type"]) - set(SIZE_CODES))
+    if unknown:
+        print("WARNING: empty-repo size codes not in report columns, skipped:", unknown)
+        df = df[df["Type"].isin(SIZE_CODES)]
+    out = pd.DataFrame({
+        "Location": df["Location"].astype(str).str.strip().replace(MERGES).replace(MERGE_LABEL),
+        "ETA": pd.to_datetime(df["EQ Date"]).dt.normalize(),
+        "Vessel": df["Vessel"].astype(str).str.strip(),
+        "Voyage": df["Voyage"].astype(str).str.strip(),
+        "POL": df["P.O.L"].astype(str).str.strip(),
+        "Type": df["Type"],
+    })
+    return out.reset_index(drop=True)
+
+
+def empty_repo_groups(er: pd.DataFrame) -> list[dict]:
+    """Group the raw rows by ETA / location / vessel / voyage / POL with per-size counts."""
+    rows = []
+    keys = ["ETA", "Location", "Vessel", "Voyage", "POL"]
+    for k, g in er.groupby(keys, sort=True):
+        counts = g["Type"].value_counts()
+        rows.append({"eta": pd.Timestamp(k[0]).strftime("%Y-%m-%d"), "loc": k[1], "vessel": k[2],
+                     "voyage": k[3], "pol": k[4],
+                     "types": {c: int(counts.get(c, 0)) for c in SIZE_CODES},
+                     "total": int(len(g))})
+    return rows
+
+
 def week_frame(today: dt.date):
     mon1 = today - dt.timedelta(days=today.weekday())
     weeks = [(mon1 + dt.timedelta(days=7 * i), mon1 + dt.timedelta(days=7 * i + 5)) for i in range(4)]
@@ -213,7 +254,8 @@ def range_label(s, e):
             f'DAY({s})&" "&{mn(s)}&"-"&DAY({e})&" "&{mn(e)})')
 
 
-def build_excel(model, stock_agg, stock_raw, bkg, out: Path, override_date: dt.date | None = None):
+def build_excel(model, stock_agg, stock_raw, bkg, out: Path, override_date: dt.date | None = None,
+                empty_raw: pd.DataFrame | None = None):
     wb = Workbook()
     F = Font(name="Calibri", size=11)
     FB = Font(name="Calibri", size=11, bold=True)
@@ -392,6 +434,8 @@ def build_excel(model, stock_agg, stock_raw, bkg, out: Path, override_date: dt.d
     sm.freeze_panes = None   # unfrozen - user request
 
     _write_teu_summary(wb, model)
+    if empty_raw is not None and len(empty_raw):
+        _write_empty_repo(wb, model, empty_raw)
     wb.save(out)
 
 
@@ -442,6 +486,74 @@ def _write_teu_summary(wb, model):
         ws.row_dimensions[r].height = 13
     ws.sheet_view.showGridLines = False
     ws.freeze_panes = "A2"
+
+
+def _write_empty_repo(wb, model, empty_raw):
+    """"Empty Repo TH" sheet: inbound empties by ETA / yard / vessel, COUNTIFS over EmptyRaw."""
+    F = Font(name="Calibri", size=11)
+    FB = Font(name="Calibri", size=11, bold=True)
+    thin = Side(style="thin", color="C9D2DF")
+    er = wb.create_sheet("EmptyRaw")
+    er.append(["Location", "ETA", "Vessel", "Voyage", "POL", "Type"])
+    for _, rr in empty_raw.iterrows():
+        er.append([rr["Location"], pd.to_datetime(rr["ETA"]).to_pydatetime(),
+                   rr["Vessel"], rr["Voyage"], rr["POL"], rr["Type"]])
+    for row in er.iter_rows():
+        for c in row:
+            c.font = F
+        if row[0].row > 1:
+            row[1].number_format = "yyyy-mm-dd"
+    for i, w in enumerate([12, 12, 9, 9, 9, 8]):
+        er.column_dimensions[get_column_letter(i + 1)].width = w
+
+    ws = wb.create_sheet("Empty Repo TH")
+    ws["A1"] = "Empty repo to TH  -  inbound empty containers by arrival date"
+    ws["A1"].font = Font(name="Calibri", size=13, bold=True, color="FFFFFF")
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=15)
+    for cc in range(1, 16):
+        ws.cell(1, cc).fill = PatternFill("solid", fgColor=NAVY)
+    heads = ["ETA", "Location", "Vessel", "Voyage", "POL"] + SIZE_CODES + ["Total"]
+    for i, h in enumerate(heads):
+        c = ws.cell(3, 1 + i, h)
+        disp = SIZE2DISP.get(h)
+        col = RE_FONT if disp in RE_DISP else OTFR_FONT if disp in OTFR_DISP else NAVY
+        c.font = Font(name="Calibri", size=11, bold=True, color=col)
+        c.alignment = Alignment(horizontal="center")
+        c.border = Border(bottom=Side(style="medium", color=NAVY))
+    groups = empty_repo_groups(empty_raw)
+    r = 3
+    for g in groups:
+        r += 1
+        ws.cell(r, 1, dt.datetime.strptime(g["eta"], "%Y-%m-%d")).number_format = "yyyy-mm-dd"
+        ws.cell(r, 2, g["loc"])
+        ws.cell(r, 3, g["vessel"])
+        ws.cell(r, 4, g["voyage"])
+        ws.cell(r, 5, g["pol"])
+        for i, code in enumerate(SIZE_CODES):
+            ws.cell(r, 6 + i, (f'=COUNTIFS(EmptyRaw!$A:$A,$B{r},EmptyRaw!$B:$B,$A{r},'
+                               f'EmptyRaw!$C:$C,$C{r},EmptyRaw!$D:$D,$D{r},'
+                               f'EmptyRaw!$E:$E,$E{r},EmptyRaw!$F:$F,{get_column_letter(6 + i)}$3)'))
+        ws.cell(r, 15, f"=SUM(F{r}:N{r})")
+        for cc in range(1, 16):
+            c = ws.cell(r, cc)
+            c.font = FB if cc in (2, 15) else F
+            c.alignment = Alignment(horizontal="left" if cc <= 5 else "center")
+            c.border = Border(bottom=thin)
+    first, last = 4, r
+    r += 1
+    ws.cell(r, 1, "TOTAL")
+    for cc in range(6, 16):
+        L = get_column_letter(cc)
+        ws.cell(r, cc, f"=SUM({L}{first}:{L}{last})")
+    for cc in range(1, 16):
+        c = ws.cell(r, cc)
+        c.font = FB
+        c.fill = PatternFill("solid", fgColor=AV_BG)
+        c.alignment = Alignment(horizontal="left" if cc <= 5 else "center")
+    for i, w in enumerate([12, 11, 9, 9, 9] + [7] * 9 + [8]):
+        ws.column_dimensions[get_column_letter(i + 1)].width = w
+    ws.sheet_view.showGridLines = False
+    ws.freeze_panes = "A4"
 
 
 def _write_block(sm, loc, c0, top, F, FB, thin, med):
@@ -613,6 +725,26 @@ def build_html(model, out: Path):
       <tbody>{''.join(rows)}</tbody></table>
     </section>""")
 
+    er = model.get("empty_repo") or []
+    if er:
+        ehead = "".join(f"<th class='{cls(SIZE2DISP[c])}'>{c}</th>" for c in SIZE_CODES) + "<th>Total</th>"
+        erows = []
+        for g in er:
+            tds = "".join(f"<td class='{cls(SIZE2DISP[c])}'>{g['types'][c]}</td>" for c in SIZE_CODES)
+            erows.append(f"<tr><th>{html.escape(_md(g['eta']))}</th><th>{html.escape(g['loc'])}</th>"
+                         f"<td>{html.escape(g['vessel'])} {html.escape(g['voyage'])}</td>"
+                         f"<td>{html.escape(g['pol'])}</td>{tds}<td><b>{g['total']}</b></td></tr>")
+        ttl = {c: sum(g["types"][c] for g in er) for c in SIZE_CODES}
+        erows.append("<tr style='font-weight:700;background:var(--av)'><th>TOTAL</th><th></th><td></td><td></td>"
+                     + "".join(f"<td>{ttl[c]}</td>" for c in SIZE_CODES)
+                     + f"<td>{sum(g['total'] for g in er)}</td></tr>")
+        cards.append(f"""
+    <section class="zone">
+      <h2>Empty repo to TH <small>inbound empty containers by arrival date</small></h2>
+      <table class="nobk-table"><thead><tr><th>ETA</th><th>Location</th><th>Vessel / Voy</th><th>POL</th>{ehead}</tr></thead>
+      <tbody>{''.join(erows)}</tbody></table>
+    </section>""")
+
     total_stock = sum(t["stock"] for l in model["locations"] for t in l["types"].values())
     total_pend = sum(t["pending"] for l in model["locations"] for t in l["types"].values())
     watch_locs = [l["code"] for l in model["locations"]
@@ -720,6 +852,15 @@ def find_default_inputs():
     return stock_path, bkg_paths
 
 
+def find_empty_input():
+    """Newest *EMPTY* export in input/ (inbound empty repo list), or None."""
+    if not INPUT_DIR.is_dir():
+        return None
+    cands = [p for p in INPUT_DIR.glob("*.xls*")
+             if "EMPTY" in p.stem.upper() and "-RH" not in p.stem.upper()]
+    return max(cands, key=lambda p: p.stat().st_mtime) if cands else None
+
+
 def _is_date_str(s: str) -> bool:
     try:
         dt.date.fromisoformat(s)
@@ -759,11 +900,16 @@ def main():
     stock_agg, stock_raw = load_stock(stock_path)
     bkg = load_all_bookings(bkg_paths)
     model = build_model(stock_agg, bkg, today)
+    empty_path = find_empty_input()
+    empty_raw = load_empty_repo(empty_path) if empty_path else None
+    if empty_raw is not None:
+        model["empty_repo"] = empty_repo_groups(empty_raw)
+        print(f"empty repo: {empty_path.name}  ({len(empty_raw)} containers)")
 
     (FOLDER / f"Stock_Daily_{tag}.model.json").write_text(
         json.dumps(model, indent=1, ensure_ascii=False), encoding="utf-8")
     build_excel(model, stock_agg, stock_raw, bkg, FOLDER / f"Stock_Daily_{tag}.xlsx",
-                override_date=override)
+                override_date=override, empty_raw=empty_raw)
     print("xlsx:", f"Stock_Daily_{tag}.xlsx")
     build_html(model, FOLDER / f"Stock_Daily_{tag}.html")
     print("html:", f"Stock_Daily_{tag}.html")
