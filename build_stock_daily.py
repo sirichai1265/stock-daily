@@ -40,7 +40,7 @@ DISP2SIZE = {v: k for k, v in SIZE2DISP.items()}   # 20'GP -> 22GP, ... (headers
 # confirmed conventions
 MERGES = {"BKK04": "BKK01"}                     # relabel -> merged block
 MERGE_LABEL = {"BKK01": "BKK01+BKK04"}
-BKK_ZONE_FORCE = {"LCH55"}                      # LCH-named but BKK zone
+BKK_ZONE_FORCE = {"LCH54", "LCH55"}                      # LCH-named but BKK zone
 # these locations always stay in the full block grid even with zero bookings
 # (never routed into the compact "no active bookings" section) - user request
 ALWAYS_FULL_BLOCK = {"BKK02", "LCH55"}
@@ -49,7 +49,7 @@ ALWAYS_FULL_BLOCK = {"BKK02", "LCH55"}
 # BKK25 then BKK27 is deliberate: with 3 lanes, index i and i+3 land in the
 # same lane one row-group apart, so BKK27 (index 3) renders directly under
 # BKK25 (index 0) - user request.
-LOCATION_ORDER = {"BKK": ["BKK25", "BKK01", "BKK02", "BKK27", "LCH55"], "LCH": []}
+LOCATION_ORDER = {"BKK": ["BKK25", "BKK01", "BKK02", "BKK27", "LCH54", "LCH55"], "LCH": []}
 # yard/depot name shown after the location code in each block's title band
 # (keyed by the display code, e.g. the merged "BKK01+BKK04") - user request
 YARD_NAME = {
