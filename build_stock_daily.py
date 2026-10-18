@@ -659,174 +659,382 @@ def _md(iso):
     return f"{d.day} {MONTHS[d.month - 1]}"
 
 
+_HTML_CSS = """
+:root{
+  color-scheme:light dark;
+  --bg:#F3F6FA;--surface:#FFFFFF;--surface-2:#F7F9FC;--ink:#14202E;--ink-2:#46586B;--muted:#7C8A9A;
+  --line:#E1E7EF;--navy:#0C2340;--navy-2:#16365F;
+  --gp:#0C2340;--re:#1F5FBF;--otfr:#8A5410;
+  --bad:#C22A2A;--bad-bg:#FDECEC;--bad-line:#F3C2C2;--ok:#1E8E5A;--ok-bg:#E7F5EE;
+  --hi:#FFF6C8;--shadow:0 1px 2px rgba(12,35,64,.06),0 4px 14px rgba(12,35,64,.05);
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0D131A;--surface:#161F2A;--surface-2:#1B2633;--ink:#E9EFF6;--ink-2:#AAB8C7;--muted:#7F8E9F;
+  --line:#26333F;--navy:#0A1726;--navy-2:#12263F;
+  --gp:#C9D6E6;--re:#7DB0FF;--otfr:#E0AE66;
+  --bad:#FF7B7B;--bad-bg:#3A1D21;--bad-line:#6B2F35;--ok:#4CC38A;--ok-bg:#12301F;
+  --hi:#3B3516;--shadow:0 1px 2px rgba(0,0,0,.4);
+}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font:14px/1.5 "Segoe UI","Leelawadee UI",Tahoma,system-ui,sans-serif;color:var(--ink);background:var(--bg);
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:1280px;margin:0 auto;padding:0 20px}
+header.top{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 100%);color:#fff;padding:22px 0 26px}
+header.top h1{margin:0;font-size:22px;font-weight:700;letter-spacing:.2px}
+header.top .sub{margin-top:4px;color:#B9C8DB;font-size:13px}
+header.top .date{display:inline-block;margin-top:12px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);
+  border-radius:999px;padding:3px 12px;font-size:13px;font-weight:600}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-top:-18px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow)}
+.kpi .lbl{font-size:12px;color:var(--ink-2);font-weight:600}
+.kpi .val{font-size:30px;line-height:1.15;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums}
+.kpi .hint{font-size:11.5px;color:var(--muted);margin-top:2px}
+.kpi.bad .val{color:var(--bad)}.kpi.ok .val{color:var(--ok)}
+section.panel{margin-top:22px}
+section.panel>h2{font-size:16px;margin:0 0 4px;display:flex;align-items:center;gap:8px}
+section.panel>.lead{margin:0 0 10px;color:var(--ink-2);font-size:12.5px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+.alerts{width:100%;border-collapse:collapse}
+.alerts th{font-size:11.5px;color:var(--muted);font-weight:600;text-align:left;padding:9px 14px;background:var(--surface-2);border-bottom:1px solid var(--line)}
+.alerts td{padding:9px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+.alerts tr:last-child td{border-bottom:0}
+.alerts tr.alert-row{cursor:pointer}.alerts tr.alert-row:hover td{background:var(--surface-2)}
+.alerts .loc{font-weight:700;white-space:nowrap}
+.alerts .loc a{color:inherit;text-decoration:none}
+.alerts .when b{font-weight:600}.alerts .when small{color:var(--muted);margin-left:6px}
+.gap{display:flex;align-items:center;gap:10px;min-width:170px}
+.gap .bar{flex:1;height:8px;border-radius:4px;background:var(--bad-bg);overflow:hidden;min-width:60px}
+.gap .bar i{display:block;height:100%;background:var(--bad);border-radius:4px}
+.gap b{color:var(--bad);font-variant-numeric:tabular-nums;white-space:nowrap}
+.allgood{padding:16px;display:flex;gap:10px;align-items:center;color:var(--ok);font-weight:600}
+details.more summary{cursor:pointer;padding:10px 14px;font-size:12.5px;color:var(--ink-2);border-top:1px solid var(--line);background:var(--surface-2)}
+.controls{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(6px);
+  padding:10px 0;margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--line)}
+.controls .lab{font-size:12px;color:var(--muted);margin:0 2px 0 6px}
+.controls button{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 14px;cursor:pointer;font-size:13px;font-weight:600}
+.controls button:hover{border-color:var(--navy-2)}
+.controls button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+@media (prefers-color-scheme:dark){.controls button.on{background:#2A5CA8;border-color:#2A5CA8}}
+.zone-h{display:flex;align-items:baseline;gap:10px;margin:26px 0 10px}
+.zone-h h2{margin:0;font-size:18px}.zone-h small{color:var(--muted);font-size:13px}
+.zone-h .tag{font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;background:var(--hi);color:#5B4A00}
+@media (prefers-color-scheme:dark){.zone-h .tag{color:#F2DD87}}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(470px,1fr));gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;scroll-margin-top:70px}
+.card.short{border-color:var(--bad-line)}
+.chd{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);background:var(--surface-2)}
+.card.short .chd{background:var(--bad-bg)}
+.chd .code{font-size:17px;font-weight:700}
+.chd .yard{font-size:12px;color:var(--ink-2)}
+.chd .meta{font-size:12px;color:var(--muted);margin-top:2px}
+.pill{font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap}
+.pill.bad{background:var(--bad);color:#fff}.pill.ok{background:var(--ok-bg);color:var(--ok)}
+@media (prefers-color-scheme:dark){.pill.bad{color:#1A0B0D}}
+.scroll{overflow-x:auto}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+table.t th,table.t td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+table.t thead th{font-size:11.5px;font-weight:600;color:var(--muted);vertical-align:bottom;background:var(--surface)}
+table.t thead th small{display:block;font-weight:500;font-size:10.5px}
+table.t thead th.cur{color:var(--ink)}
+table.t tbody tr:last-child th,table.t tbody tr:last-child td{border-bottom:0}
+table.t th.type,table.t td.type{text-align:left;font-weight:700;padding-left:14px}
+table.t th.type small{font-weight:500;color:var(--muted);margin-left:6px;font-size:11px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;background:var(--gp)}
+.re .dot{background:var(--re)}.otfr .dot{background:var(--otfr)}
+td.num{font-variant-numeric:tabular-nums}td.num.z{color:var(--muted)}
+td.stock b{font-size:14px}
+td.wk{font-variant-numeric:tabular-nums;line-height:1.2}
+td.wk b{display:block;font-size:14px}
+td.wk small{display:block;color:var(--muted);font-size:10.5px}
+td.wk.neg{background:var(--bad-bg);box-shadow:inset 3px 0 0 var(--bad)}
+td.wk.neg b{color:var(--bad)}td.wk.neg b::before{content:"▼ ";font-size:9px;vertical-align:1px}
+td.trend{padding-right:14px;text-align:center}
+svg.sp{display:block;margin:auto}
+.nobk{width:100%;border-collapse:collapse;font-size:13px}
+.nobk th,.nobk td{padding:8px 10px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap}
+.nobk thead th{background:var(--surface-2);font-size:12px;color:var(--ink-2)}
+.nobk thead th.re{color:var(--re)}.nobk thead th.otfr{color:var(--otfr)}
+.nobk tbody th{text-align:left;font-weight:700}
+.nobk td.z{color:var(--muted)}.nobk td.tot,.nobk th.tot{font-weight:700;background:var(--surface-2)}
+.nobk tr.sum td,.nobk tr.sum th{background:var(--hi);font-weight:700;border-bottom:0}
+.nobk td.eta b{display:block}.nobk td.eta small{color:var(--muted);font-size:11px}
+.nobk .l{text-align:left}
+.help{margin-top:22px}
+.help summary{cursor:pointer;font-weight:700;font-size:14px;padding:12px 16px}
+.help .body{padding:0 16px 14px;color:var(--ink-2);font-size:13px}
+.help ul{margin:6px 0 0;padding-left:18px}.help li{margin:3px 0}
+footer{padding:22px 0 40px;color:var(--muted);font-size:12px}
+.hide{display:none!important}
+@media (max-width:620px){
+  .wrap{padding:0 12px}.grid{grid-template-columns:1fr}header.top h1{font-size:19px}
+  .kpi .val{font-size:26px}.alerts th,.alerts td{padding:8px 9px}.gap{min-width:110px}
+}
+"""
+
+_HTML_JS = """
+var st={zone:'all',short:false};
+function apply(){
+  document.querySelectorAll('.card').forEach(function(c){
+    var ok=(st.zone==='all'||c.dataset.zone===st.zone)&&(!st.short||c.dataset.badge==='short');
+    c.classList.toggle('hide',!ok);
+  });
+  document.querySelectorAll('.zone-sec[data-zone]').forEach(function(z){
+    var any=z.querySelector('.card:not(.hide)');
+    z.classList.toggle('hide',!any);
+  });
+  document.querySelectorAll('.alert-row').forEach(function(r){
+    r.classList.toggle('hide',st.zone!=='all'&&r.dataset.zone!==st.zone);
+  });
+}
+document.querySelectorAll('.controls button').forEach(function(b){
+  b.onclick=function(){
+    if(b.dataset.f==='zone'){st.zone=b.dataset.v;
+      document.querySelectorAll('.controls button[data-f="zone"]').forEach(function(x){x.classList.toggle('on',x===b)});}
+    else{st.short=!st.short;b.classList.toggle('on',st.short);}
+    apply();
+  };
+});
+document.querySelectorAll('.alert-row').forEach(function(r){
+  r.onclick=function(){
+    var c=document.getElementById(r.dataset.target);
+    if(c){c.classList.remove('hide');c.scrollIntoView({behavior:'smooth',block:'start'});}
+  };
+});
+"""
+
+
+def _fmt(n):
+    return f"{n:,}".replace("-", "−")
+
+
+def _rng(a, b):
+    da, db = dt.date.fromisoformat(a), dt.date.fromisoformat(b)
+    if da.month == db.month:
+        return f"{da.day}–{db.day} {MONTHS[db.month - 1]}"
+    return f"{da.day} {MONTHS[da.month - 1]}–{db.day} {MONTHS[db.month - 1]}"
+
+
+def _spark(vals):
+    w, h, pad = 64, 22, 3
+    lo, hi = min(0, min(vals)), max(max(vals), 1)
+    span = (hi - lo) or 1
+    xs = [pad + i * (w - 2 * pad) / (len(vals) - 1) for i in range(len(vals))]
+    ys = [pad + (hi - v) * (h - 2 * pad) / span for v in vals]
+    pts = " ".join(f"{x:.1f},{y:.1f}" for x, y in zip(xs, ys))
+    bad = min(vals) < 0
+    col = "var(--bad)" if bad else "var(--ink-2)"
+    zero = ""
+    if lo < 0:
+        zy = pad + hi * (h - 2 * pad) / span
+        zero = (f"<line x1='0' x2='{w}' y1='{zy:.1f}' y2='{zy:.1f}' stroke='var(--muted)' "
+                "stroke-width='1' stroke-dasharray='2 2'/>")
+    return (f"<svg class='sp' width='{w}' height='{h}' viewBox='0 0 {w} {h}' aria-hidden='true'>{zero}"
+            f"<polyline points='{pts}' fill='none' stroke='{col}' stroke-width='2' stroke-linejoin='round' "
+            f"stroke-linecap='round'/><circle cx='{xs[-1]:.1f}' cy='{ys[-1]:.1f}' r='2.6' fill='{col}'/></svg>")
+
+
 def build_html(model, out: Path):
+    import re
     wk = model["iso_weeks"]
-    wsp = [f"{_md(model['weeks'][i][0])}–{_md(model['weeks'][i][1])}" for i in range(4)]
+    weeks = model["weeks"]
+    today = dt.date.fromisoformat(model["date"])
     rdate = _md(model["date"]) + " " + model["date"][:4]
     zones = [("BKK", "Bangkok area depots"), ("LCH", "Laem Chabang area depots")]
+    E = html.escape
 
     def cls(disp):
         return "re" if disp in RE_DISP else "otfr" if disp in OTFR_DISP else "gp"
 
-    with_bkg = [l for l in model["locations"]
-               if l.get("has_booking", True) or l["key"] in ALWAYS_FULL_BLOCK]
-    no_bkg = [l for l in model["locations"]
-             if not l.get("has_booking", True) and l["key"] not in ALWAYS_FULL_BLOCK]
+    def anchor(l):
+        return "loc-" + re.sub(r"\W+", "-", l["code"]).strip("-")
 
-    cards = []
+    with_bkg = [l for l in model["locations"]
+                if l.get("has_booking", True) or l["key"] in ALWAYS_FULL_BLOCK]
+    no_bkg = [l for l in model["locations"]
+              if not l.get("has_booking", True) and l["key"] not in ALWAYS_FULL_BLOCK]
+    all_t = [t for l in model["locations"] for t in l["types"].values()]
+    total_stock = sum(t["stock"] for t in all_t)
+    total_pend = sum(t["pending"] for t in all_t)
+
+    # ---- shortage alerts ------------------------------------------------
+    alerts = []
+    for l in with_bkg:
+        for d in DISP_ORDER:
+            av = l["types"][d]["av"]
+            if min(av) < 0:
+                first = next(i for i, v in enumerate(av) if v < 0)
+                alerts.append((min(av), l, d, first))
+    alerts.sort(key=lambda a: a[0])
+    short_locs = {a[1]["code"] for a in alerts}
+    worst_all = abs(alerts[0][0]) if alerts else 1
+
+    def alert_row(a):
+        mn, l, d, first = a
+        when = "this week" if first == 0 else f"from WK{wk[first]}"
+        pct = max(6, round(abs(mn) / worst_all * 100))
+        return (f"<tr class='alert-row' data-zone='{l['zone']}' data-target='{anchor(l)}'>"
+                f"<td class='loc'><a href='#{anchor(l)}'>{E(l['code'])}</a></td>"
+                f"<td class='{cls(d)}'><i class='dot' style='display:inline-block'></i>"
+                f"<b>{E(d)}</b> <small style='color:var(--muted)'>{DISP2SIZE[d]}</small></td>"
+                f"<td class='when'><b>{when}</b><small>by {_md(weeks[first][1])}</small></td>"
+                f"<td><div class='gap'><div class='bar'><i style='width:{pct}%'></i></div>"
+                f"<b>{_fmt(mn)}</b></div></td></tr>")
+
+    if alerts:
+        rows = [alert_row(a) for a in alerts]
+        head = ("<tr><th>Location</th><th>Container type</th><th>Runs short</th>"
+                "<th>Lowest balance (shortfall)</th></tr>")
+        tail = ""
+        if len(rows) > 10:
+            tail = (f"<details class='more'><summary>Show {len(rows) - 10} more</summary>"
+                    f"<table class='alerts'><tbody>{''.join(rows[10:])}</tbody></table></details>")
+        alert_html = (f"<div class='box'><table class='alerts'><thead>{head}</thead>"
+                      f"<tbody>{''.join(rows[:10])}</tbody></table>{tail}</div>")
+        lead = ("ตู้ว่างไม่พอรับ booking ภายใน 4 สัปดาห์ — เรียงจากขาดมากสุด "
+                "(คลิกแถวเพื่อไปที่การ์ดของลานนั้น)")
+    else:
+        alert_html = "<div class='box'><div class='allgood'>✔ No shortage in the next 4 weeks</div></div>"
+        lead = "ไม่มีลาน/ชนิดตู้ไหนขาดใน 4 สัปดาห์ข้างหน้า"
+
+    # ---- location cards -------------------------------------------------
+    def card(l):
+        t = l["types"]
+        active = [d for d in DISP_ORDER if t[d]["stock"] or any(t[d]["wk"]) or t[d]["pending"]] or ["20'GP"]
+        short_types = [d for d in DISP_ORDER if min(t[d]["av"]) < 0]
+        badge = "short" if short_types else "ok"
+        pill = (f"<span class='pill bad'>▼ SHORT · {len(short_types)} type{'s' if len(short_types) > 1 else ''}</span>"
+                if short_types else "<span class='pill ok'>✔ OK</span>")
+        yard = YARD_NAME.get(l["code"])
+        stock_sum = sum(t[d]["stock"] for d in DISP_ORDER)
+        pend_sum = sum(t[d]["pending"] for d in DISP_ORDER)
+        wk_head = "".join(
+            f"<th class='{'cur' if i == 0 else ''}'>WK{wk[i]}<small>{_rng(*weeks[i])}</small></th>"
+            for i in range(4))
+        body = []
+        for d in active:
+            x = t[d]
+            cells = []
+            for i in range(4):
+                neg = x["av"][i] < 0
+                bk = x["wk"][i]
+                tip = (f"WK{wk[i]} {_rng(*weeks[i])}: booked {bk}, balance after = {x['av'][i]}")
+                cells.append(f"<td class='wk{' neg' if neg else ''}' title='{E(tip)}'><b>{_fmt(x['av'][i])}</b>"
+                             f"<small>{'−' + str(bk) if bk else '–'}</small></td>")
+            spark = _spark([x["stock"] - x["pending"]] + x["av"])
+            zc = " z" if not x["pending"] else ""
+            body.append(
+                f"<tr class='{cls(d)}'><th class='type'><i class='dot'></i>{E(d)}<small>{DISP2SIZE[d]}</small></th>"
+                f"<td class='num stock'><b>{_fmt(x['stock'])}</b></td>"
+                f"<td class='num{zc}'>{_fmt(x['pending']) if x['pending'] else '–'}</td>"
+                f"{''.join(cells)}<td class='trend'>{spark}</td></tr>")
+        yard_html = f"<div class='yard'>{E(yard)}</div>" if yard else ""
+        return (f"<div class='card{' short' if short_types else ''}' id='{anchor(l)}' data-zone='{l['zone']}' "
+                f"data-badge='{badge}'><div class='chd'><div><div class='code'>{E(l['code'])}</div>{yard_html}"
+                f"<div class='meta'>{_fmt(stock_sum)} empty on hand · {_fmt(pend_sum)} overdue pickup</div></div>{pill}</div>"
+                f"<div class='scroll'><table class='t'><thead><tr><th class='type'>Type</th><th>Stock</th>"
+                f"<th>Overdue<small>pickup</small></th>{wk_head}<th>Trend</th></tr></thead>"
+                f"<tbody>{''.join(body)}</tbody></table></div></div>")
+
+    sections = []
     for zid, zname in zones:
         zlocs = [l for l in with_bkg if l["zone"] == zid]
         if not zlocs:
             continue
-        inner = []
-        for l in zlocs:
-            t = l["types"]
-            active = [d for d in DISP_ORDER
-                      if t[d]["stock"] or any(t[d]["wk"]) or t[d]["pending"]]
-            if not active:
-                active = ["20'GP"]
-            worst = min((t[d]["av"][i] for d in DISP_ORDER for i in range(4)), default=0)
-            badge = "watch" if worst < 0 else "ok"
-            head = "".join(f"<th class='{cls(d)}'>{html.escape(d)}</th>" for d in active)
-            def row(lbl, fn, extra=""):
-                tds = "".join(
-                    f"<td class='{cls(d)}{(' neg' if fn(d) < 0 else '')}'>{fn(d)}</td>" for d in active)
-                return f"<tr class='{extra}'><th>{lbl}</th>{tds}</tr>"
-            rows = [row("Stock empty", lambda d: t[d]["stock"], "stockrow")]
-            rows.append(row(f"Pending pickup · WK{wk[0]}", lambda d: t[d]["pending"]))
-            rows.append(row(f"WK{wk[0]} {wsp[0]}", lambda d: t[d]["wk"][0]))
-            rows.append(row(f"AV bal · {_md(model['weeks'][0][1])}", lambda d: t[d]["av"][0], "avrow"))
-            for i in (1, 2, 3):
-                rows.append(row(f"WK{wk[i]} {wsp[i]}", lambda d, i=i: t[d]["wk"][i]))
-                rows.append(row(f"AV bal · {_md(model['weeks'][i][1])}",
-                                lambda d, i=i: t[d]["av"][i], "avrow"))
-            inner.append(f"""
-      <div class="card" data-zone="{zid}" data-badge="{badge}">
-        <div class="chd"><span class="code">{html.escape(l['code'])}</span>
-          <span class="badge {badge}">{badge.upper()}</span></div>
-        <table><thead><tr><th></th>{head}</tr></thead><tbody>{''.join(rows)}</tbody></table>
-      </div>""")
-        cards.append(f"""
-    <section class="zone" data-zone="{zid}">
-      <h2>{zid} <small>{zname}</small></h2>
-      <div class="grid">{''.join(inner)}</div>
-    </section>""")
+        n_short = sum(1 for l in zlocs if l["code"] in short_locs)
+        tag = f"<span class='tag'>{n_short} at risk</span>" if n_short else ""
+        sections.append(
+            f"<div class='zone-sec' data-zone='{zid}'><div class='zone-h'><h2>{zid}</h2>"
+            f"<small>{zname}</small>{tag}</div><div class='grid'>{''.join(card(l) for l in zlocs)}</div></div>")
 
+    # ---- stock-on-hand-only table --------------------------------------
     if no_bkg:
-        head = "".join(f"<th class='{cls(d)}'>{DISP2SIZE[d]}</th>" for d in DISP_ORDER) + "<th>Total</th>"
-        rows = []
+        th = "".join(f"<th class='{cls(SIZE2DISP[c])}'>{c}</th>" for c in SIZE_CODES)
+        trs = []
         for l in no_bkg:
             t = l["types"]
-            tds = "".join(f"<td class='{cls(d)}'>{t[d]['stock']}</td>" for d in DISP_ORDER)
-            tds += f"<td><b>{sum(t[d]['stock'] for d in DISP_ORDER)}</b></td>"
-            rows.append(f"<tr><th>{html.escape(l['zone'])}</th><th>{html.escape(l['code'])}</th>{tds}</tr>")
-        cards.insert(0, f"""
-    <section class="zone nobk">
-      <h2>Stock on hand only <small>no active bookings this period</small></h2>
-      <table class="nobk-table"><thead><tr><th>Zone</th><th>Location</th>{head}</tr></thead>
-      <tbody>{''.join(rows)}</tbody></table>
-    </section>""")
+            tds = "".join(
+                f"<td class='z'>·</td>" if not t[d]["stock"] else f"<td>{_fmt(t[d]['stock'])}</td>"
+                for d in DISP_ORDER)
+            trs.append(f"<tr><th>{E(l['code'])}</th><td class='l'>{E(l['zone'])}</td>{tds}"
+                       f"<td class='tot'>{_fmt(sum(t[d]['stock'] for d in DISP_ORDER))}</td></tr>")
+        sections.insert(0, (
+            "<section class='panel'><h2>Stock on hand only <small style='color:var(--muted);font-weight:500'>"
+            "no active bookings this period</small></h2>"
+            "<p class='lead'>ลานที่มีตู้ว่างแต่ไม่มี booking ในช่วงนี้</p>"
+            f"<div class='box scroll'><table class='nobk'><thead><tr><th class='l'>Location</th><th class='l'>Zone</th>"
+            f"{th}<th>Total</th></tr></thead><tbody>{''.join(trs)}</tbody></table></div></section>"))
 
+    # ---- empty repo to TH ----------------------------------------------
     er = model.get("empty_repo") or []
+    er_total = sum(g["total"] for g in er)
     if er:
-        ehead = "".join(f"<th class='{cls(SIZE2DISP[c])}'>{c}</th>" for c in SIZE_CODES) + "<th>Total</th>"
-        erows = []
+        th = "".join(f"<th class='{cls(SIZE2DISP[c])}'>{c}</th>" for c in SIZE_CODES)
+        trs = []
         for g in er:
-            tds = "".join(f"<td class='{cls(SIZE2DISP[c])}'>{g['types'][c]}</td>" for c in SIZE_CODES)
-            erows.append(f"<tr><th>{html.escape(_md(g['eta']))}</th><th>{html.escape(g['loc'])}</th>"
-                         f"<td>{html.escape(g['vessel'])} {html.escape(g['voyage'])}</td>"
-                         f"<td>{html.escape(g['pol'])}</td>{tds}<td><b>{g['total']}</b></td></tr>")
+            days = (dt.date.fromisoformat(g["eta"]) - today).days
+            when = ("today" if days == 0 else "tomorrow" if days == 1 else
+                    f"in {days} days" if days > 1 else f"{-days} days ago")
+            tds = "".join(f"<td class='z'>·</td>" if not g["types"][c] else f"<td>{g['types'][c]}</td>"
+                          for c in SIZE_CODES)
+            trs.append(f"<tr><td class='eta l'><b>{_md(g['eta'])}</b><small>{when}</small></td>"
+                       f"<th>{E(g['loc'])}</th><td class='l'>{E(g['vessel'])} {E(g['voyage'])}</td>"
+                       f"<td class='l'>{E(g['pol'])}</td>{tds}<td class='tot'>{g['total']}</td></tr>")
         ttl = {c: sum(g["types"][c] for g in er) for c in SIZE_CODES}
-        erows.append("<tr style='font-weight:700;background:var(--av)'><th>TOTAL</th><th></th><td></td><td></td>"
-                     + "".join(f"<td>{ttl[c]}</td>" for c in SIZE_CODES)
-                     + f"<td>{sum(g['total'] for g in er)}</td></tr>")
-        cards.insert(0, f"""
-    <section class="zone">
-      <h2>Empty repo to TH <small>inbound empty containers by arrival date</small></h2>
-      <table class="nobk-table"><thead><tr><th>ETA</th><th>Location</th><th>Vessel / Voy</th><th>POL</th>{ehead}</tr></thead>
-      <tbody>{''.join(erows)}</tbody></table>
-    </section>""")
+        trs.append("<tr class='sum'><th>TOTAL</th><th></th><td></td><td></td>"
+                   + "".join(f"<td>{ttl[c] or '·'}</td>" for c in SIZE_CODES) + f"<td>{er_total}</td></tr>")
+        etas = sorted({g["eta"] for g in er})
+        span = _md(etas[0]) if len(etas) == 1 else f"{_md(etas[0])}–{_md(etas[-1])}"
+        sections.insert(0, (
+            f"<section class='panel'><h2>Empty repo to TH <small style='color:var(--muted);font-weight:500'>"
+            f"{er_total} empty containers arriving {span}</small></h2>"
+            "<p class='lead'>ตู้เปล่าที่เรือกำลังนำเข้าไทย (ยังไม่รวมในตัวเลข stock และ AV balance)</p>"
+            f"<div class='box scroll'><table class='nobk'><thead><tr><th class='l'>ETA</th><th class='l'>Location</th>"
+            f"<th class='l'>Vessel / Voy</th><th class='l'>POL</th>{th}<th>Total</th></tr></thead>"
+            f"<tbody>{''.join(trs)}</tbody></table></div></section>"))
 
-    total_stock = sum(t["stock"] for l in model["locations"] for t in l["types"].values())
-    total_pend = sum(t["pending"] for l in model["locations"] for t in l["types"].values())
-    watch_locs = [l["code"] for l in model["locations"]
-                  if min((l["types"][d]["av"][i] for d in DISP_ORDER for i in range(4)), default=0) < 0]
+    # ---- KPIs -----------------------------------------------------------
+    n_full = len(with_bkg)
+    kpis = [
+        ("", "Empty stock on hand", _fmt(total_stock), "all container types, all yards"),
+        ("", "Overdue pickup", _fmt(total_pend), "bookings dated before today, not yet picked up"),
+        ("bad" if short_locs else "ok", "Yards at risk", f"{len(short_locs)} / {n_full}",
+         f"{len(alerts)} type(s) run short within 4 weeks" if alerts else "no shortage in 4 weeks"),
+    ]
+    if er:
+        kpis.append(("", "Empty repo inbound", _fmt(er_total), f"arriving {span}"))
+    kpi_html = "".join(
+        f"<div class='kpi {c}'><div class='lbl'>{l}</div><div class='val'>{v}</div><div class='hint'>{h}</div></div>"
+        for c, l, v, h in kpis)
 
-    page = f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Daily Container Stock vs Booking · {rdate}</title>
-<style>
-:root{{--navy:#0C2340;--re:#1F4E9C;--otfr:#7A4B12;--av:#FFF6C8;--neg:#C22A2A;--ink:#222a33;--mute:#5b6b7b;--line:#d5dde6;--card:#f3f5f8}}
-*{{box-sizing:border-box}}body{{margin:0;font:14px/1.45 "Segoe UI",Calibri,system-ui,sans-serif;color:var(--ink);background:#eef1f5}}
-header{{background:var(--navy);color:#fff;padding:18px 26px}}
-header h1{{margin:0;font-size:20px}}header .sub{{color:#c7d2e0;font-size:12.5px;margin-top:4px}}
-.kpis{{display:flex;gap:14px;flex-wrap:wrap;padding:16px 26px;background:#fff;border-bottom:1px solid var(--line)}}
-.kpi{{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 16px;min-width:150px}}
-.kpi b{{display:block;font-size:24px;color:var(--navy)}}.kpi span{{font-size:11px;color:var(--mute)}}
-.controls{{padding:12px 26px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}}
-.controls button{{border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12.5px}}
-.controls button.on{{background:var(--navy);color:#fff;border-color:var(--navy)}}
-.zone{{padding:6px 26px 20px}}.zone h2{{font-size:15px;margin:14px 0 8px;color:var(--navy)}}
-.zone h2 small{{color:var(--mute);font-weight:normal;font-size:12px}}
-.grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}}
-.nobk-table{{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:9px;overflow:hidden;font-size:12.5px}}
-.nobk-table th,.nobk-table td{{padding:7px 10px;text-align:center;border-bottom:1px solid #eef1f5}}
-.nobk-table thead th{{background:#6B7280;color:#fff;font-weight:700}}
-.nobk-table tbody th{{text-align:left;font-weight:600;color:var(--ink);white-space:nowrap}}
-.nobk-table td.re{{color:var(--re)}}.nobk-table td.otfr{{color:var(--otfr)}}
-.card{{background:#fff;border:1px solid var(--line);border-radius:9px;overflow:hidden}}
-.chd{{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:var(--navy);color:#fff}}
-.chd .code{{font-weight:700}}
-.badge{{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px}}
-.badge.ok{{background:#1E8E5A}}.badge.watch{{background:var(--neg)}}
-table{{width:100%;border-collapse:collapse;font-size:12px}}
-th,td{{padding:4px 6px;text-align:center;border-bottom:1px solid #eef1f5}}
-tbody th{{text-align:left;font-weight:600;color:var(--mute);white-space:nowrap}}
-thead th.re,td.re{{color:var(--re)}}thead th.otfr,td.otfr{{color:var(--otfr)}}
-tr.stockrow{{background:var(--card)}}tr.stockrow th{{color:var(--ink)}}
-tr.avrow{{background:var(--av)}}tr.avrow th{{color:var(--ink)}}
-td.neg{{color:var(--neg);font-weight:700}}
-.hide{{display:none}}
-footer{{padding:14px 26px;color:var(--mute);font-size:11px}}
-</style></head><body>
-<header><h1>Daily Container Stock vs Booking</h1>
-<div class="sub">Report date {rdate} · empty stock on hand vs outstanding bookings · all 9 container types</div></header>
-<div class="kpis">
-  <div class="kpi"><b>{total_stock}</b><span>total empty stock (all types)</span></div>
-  <div class="kpi"><b>{total_pend}</b><span>total pending pickup (overdue)</span></div>
-  <div class="kpi"><b>{len(watch_locs)}</b><span>locations with negative AV balance</span></div>
-  <div class="kpi"><b>{html.escape(', '.join(watch_locs) or '—')}</b><span>watch list</span></div>
-</div>
-<div class="controls">
-  <span style="font-size:12px;color:var(--mute)">Zone:</span>
-  <button data-f="zone" data-v="all" class="on">All</button>
-  <button data-f="zone" data-v="BKK">BKK</button>
-  <button data-f="zone" data-v="LCH">LCH</button>
-  <span style="font-size:12px;color:var(--mute);margin-left:10px">Show:</span>
-  <button data-f="badge" data-v="all" class="on">All</button>
-  <button data-f="badge" data-v="watch">Watch only</button>
-</div>
-{''.join(cards)}
-<footer>Stock = empty containers in yard now (snapshot). Booking = pickups by TRAN DT.
-AV Balance = stock − pending − cumulative bookings through each week; negative = not enough empties.
-Generated from {html.escape(model['date'])} STAYING + BKG+PD.</footer>
-<script>
-var st={{zone:'all',badge:'all'}};
-document.querySelectorAll('.controls button').forEach(function(b){{
- b.onclick=function(){{
-  st[b.dataset.f]=b.dataset.v;
-  document.querySelectorAll('.controls button[data-f="'+b.dataset.f+'"]').forEach(function(x){{x.classList.toggle('on',x===b)}});
-  document.querySelectorAll('.card').forEach(function(c){{
-   var ok=(st.zone==='all'||c.dataset.zone===st.zone)&&(st.badge==='all'||c.dataset.badge===st.badge);
-   c.classList.toggle('hide',!ok);
-  }});
-  document.querySelectorAll('.zone[data-zone]').forEach(function(z){{
-   z.classList.toggle('hide',st.zone!=='all'&&z.dataset.zone!==st.zone);
-  }});
- }};
-}});
-</script>
-</body></html>"""
+    help_html = (
+        "<details class='box help'><summary>วิธีอ่านรายงาน · How to read</summary><div class='body'><ul>"
+        "<li><b>Stock</b> = ตู้เปล่าที่อยู่ในลานตอนนี้ · <b>Overdue pickup</b> = booking ที่เลยวันนัดแล้วแต่ยังไม่ได้รับตู้ (หักออกก่อน)</li>"
+        "<li>ช่อง <b>WK</b>: ตัวเลขใหญ่ = ตู้คงเหลือ (AV balance) หลังหัก booking ของสัปดาห์นั้นและสัปดาห์ก่อนหน้าทั้งหมด · "
+        "ตัวเล็ก = จำนวน booking ของสัปดาห์นั้น</li>"
+        "<li><span style='color:var(--bad);font-weight:700'>▼ สีแดง</span> = ตู้คงเหลือติดลบ คือตู้ไม่พอรับ booking</li>"
+        "<li><b>Trend</b> = เส้นแนวโน้มของตู้คงเหลือ จากวันนี้ถึงปลาย 4 สัปดาห์ (เส้นประ = ศูนย์)</li>"
+        "<li>WK1 รวม booking ตั้งแต่วันนี้ถึงวันเสาร์ของสัปดาห์นี้</li></ul></div></details>")
+
+    css = _HTML_CSS
+    page = (
+        "<!doctype html><html lang='en'><head><meta charset='utf-8'>"
+        "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+        f"<title>Daily Container Stock vs Booking · {rdate}</title><style>{css}</style></head><body>"
+        f"<header class='top'><div class='wrap'><h1>Daily Container Stock vs Booking</h1>"
+        f"<div class='sub'>ตู้เปล่าในลาน เทียบกับ booking 4 สัปดาห์ · all 9 container types</div>"
+        f"<span class='date'>Report date · {rdate}</span></div></header>"
+        f"<main class='wrap'><div class='kpis'>{kpi_html}</div>"
+        f"<section class='panel'><h2>{'⚠' if alerts else '✔'} Shortage alerts</h2><p class='lead'>{lead}</p>{alert_html}</section>"
+        "<div class='controls'><span class='lab'>Zone</span>"
+        "<button data-f='zone' data-v='all' class='on'>All</button>"
+        "<button data-f='zone' data-v='BKK'>BKK</button><button data-f='zone' data-v='LCH'>LCH</button>"
+        "<span class='lab' style='margin-left:12px'>Show</span><button data-f='short'>Shortage only</button></div>"
+        f"{''.join(sections)}{help_html}"
+        f"<footer>Stock = empty containers in yard now (snapshot). Booking = pickups by TRAN DT. "
+        f"AV balance = stock − overdue pickup − cumulative bookings through each week. "
+        f"Generated from {E(model['date'])} STAYING + booking exports.</footer></main>"
+        f"<script>{_HTML_JS}</script></body></html>")
     out.write_text(page, encoding="utf-8")
 
 
