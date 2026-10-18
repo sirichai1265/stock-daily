@@ -758,6 +758,8 @@ def build_html(model, out: Path):
     </section>""")
 
     if summary_rows:
+        loc_idx = {l["code"]: i for i, l in enumerate(model["locations"])}
+        summary_rows.sort(key=lambda r: loc_idx[r[1]])   # model order: ..., BKK27, LCH54, LCH55, ...
         srows = []
         for zid, code, stk, pnd, wkb, bk, sh, bdg in summary_rows:
             srows.append(
@@ -856,7 +858,7 @@ header h1{{margin:0;font-size:20px}}header .sub{{color:#c7d2e0;font-size:12.5px;
 .card{{background:#fff;border:1px solid var(--line);border-radius:9px;overflow:hidden}}
 .chd{{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:var(--navy);color:#fff}}
 .chd .code{{font-weight:700}}
-.badge{{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px}}
+.badge{{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;color:#fff}}
 .badge.ok{{background:#1E8E5A}}.badge.watch{{background:var(--neg)}}
 table{{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}}
 th,td{{padding:7px 4px;text-align:center;border-bottom:1px solid #eef1f5}}
@@ -890,6 +892,7 @@ footer{{padding:14px 26px;color:var(--mute);font-size:11px}}
   <button data-f="zone" data-v="LCH">LCH</button>
   <span style="font-size:12px;color:var(--mute);margin-left:10px">Show:</span>
   <button data-f="badge" data-v="all" class="on">All</button>
+  <button data-f="badge" data-v="ok">OK only</button>
   <button data-f="badge" data-v="watch">Watch only</button>
 </div>
 {''.join(cards)}
