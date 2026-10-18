@@ -50,6 +50,10 @@ ALWAYS_FULL_BLOCK = {"BKK02", "LCH55"}
 # same lane one row-group apart, so BKK27 (index 3) renders directly under
 # BKK25 (index 0) - user request.
 LOCATION_ORDER = {"BKK": ["BKK25", "BKK01", "BKK02", "BKK27", "LCH54", "LCH55"], "LCH": []}
+# HTML dashboard card grid, 3 per row, in this order (user request 2026-10-18); a missing code keeps
+# its slot empty so the rest stay in place; codes not listed (e.g. BKKY5) follow after.
+HTML_CARD_ORDER = {"BKK": ["BKK01+BKK04", "BKK02", "LCH54", "BKK25", "BKK27", "LCH55"],
+                   "LCH": ["LCH27", "LCH28", "LCHY5"]}
 # yard/depot name shown after the location code in each block's title band
 # (keyed by the display code, e.g. the merged "BKK01+BKK04") - user request
 YARD_NAME = {
@@ -659,9 +663,16 @@ def _md(iso):
     return f"{d.day} {MONTHS[d.month - 1]}"
 
 
+def _rng(a, b):
+    da, db = dt.date.fromisoformat(a), dt.date.fromisoformat(b)
+    if da.month == db.month:
+        return f"{da.day}\u2013{db.day} {MONTHS[db.month - 1]}"
+    return f"{da.day} {MONTHS[da.month - 1]}\u2013{db.day} {MONTHS[db.month - 1]}"
+
+
 def build_html(model, out: Path):
     wk = model["iso_weeks"]
-    wsp = [f"{_md(model['weeks'][i][0])}–{_md(model['weeks'][i][1])}" for i in range(4)]
+    wsp = [_rng(*model["weeks"][i]) for i in range(4)]
     rdate = _md(model["date"]) + " " + model["date"][:4]
     zones = [("BKK", "Bangkok area depots"), ("LCH", "Laem Chabang area depots")]
 
@@ -679,7 +690,16 @@ def build_html(model, out: Path):
         if not zlocs:
             continue
         inner = []
-        for l in zlocs:
+        pref = HTML_CARD_ORDER.get(zid, [])
+        by_code = {l["code"]: l for l in zlocs}
+        slots = [by_code.get(c) for c in pref]
+        while slots and slots[-1] is None:
+            slots.pop()
+        slots += [l for l in zlocs if l["code"] not in pref]
+        for l in slots:
+            if l is None:
+                inner.append('<div class="slot"></div>')
+                continue
             t = l["types"]
             active = list(DISP_ORDER)   # always show all 9 types - user request
             worst = min((t[d]["av"][i] for d in DISP_ORDER for i in range(4)), default=0)
@@ -687,21 +707,49 @@ def build_html(model, out: Path):
             head = "".join(f"<th class='{cls(d)}'>{html.escape(d)}</th>" for d in active)
             def row(lbl, fn, extra=""):
                 tds = "".join(
-                    f"<td class='{cls(d)}{(' neg' if fn(d) < 0 else '')}'>{fn(d)}</td>" for d in active)
+                    f"<td class='{cls(d)}{(' neg' if fn(d) < 0 else ' z' if fn(d) == 0 else '')}'>{fn(d)}</td>"
+                    for d in active)
                 return f"<tr class='{extra}'><th>{lbl}</th>{tds}</tr>"
             rows = [row("Stock empty", lambda d: t[d]["stock"], "stockrow")]
-            rows.append(row(f"Pending pickup · WK{wk[0]}", lambda d: t[d]["pending"]))
-            rows.append(row(f"WK{wk[0]} {wsp[0]}", lambda d: t[d]["wk"][0]))
+            rows.append(row(f"Pending · WK{wk[0]}", lambda d: t[d]["pending"]))
+            rows.append(row(f"WK{wk[0]} · {wsp[0]}", lambda d: t[d]["wk"][0]))
             rows.append(row(f"AV bal · {_md(model['weeks'][0][1])}", lambda d: t[d]["av"][0], "avrow"))
             for i in (1, 2, 3):
-                rows.append(row(f"WK{wk[i]} {wsp[i]}", lambda d, i=i: t[d]["wk"][i]))
+                rows.append(row(f"WK{wk[i]} · {wsp[i]}", lambda d, i=i: t[d]["wk"][i]))
                 rows.append(row(f"AV bal · {_md(model['weeks'][i][1])}",
                                 lambda d, i=i: t[d]["av"][i], "avrow"))
+            stock_sum = sum(t[d]["stock"] for d in DISP_ORDER)
+            pend_sum = sum(t[d]["pending"] for d in DISP_ORDER)
+            book_sum = sum(sum(t[d]["wk"]) for d in DISP_ORDER)
+            short_items = []
+            short_units = 0
+            for d in DISP_ORDER:
+                mn = min(t[d]["av"])
+                if mn < 0:
+                    first = next(i for i, v in enumerate(t[d]["av"]) if v < 0)
+                    short_units += -mn
+                    short_items.append((mn, f"{d} {mn} from WK{wk[first]} (by {_md(model['weeks'][first][1])})"))
+            short_items.sort()
+            if short_items:
+                remark = ("<b>Remark:</b> ⚠ short \u2013 " + "; ".join(x[1] for x in short_items))
+                rcls = "bad"
+            elif not (pend_sum or book_sum):
+                remark = "<b>Remark:</b> no active bookings in the next 4 weeks"
+                rcls = "ok"
+            else:
+                remark = "<b>Remark:</b> ✔ enough stock for all bookings in the next 4 weeks"
+                rcls = "ok"
+            kpi = (f"<div class='cft'><div class='kp'><span>Stock</span><b>{stock_sum}</b></div>"
+                   f"<div class='kp'><span>Overdue pickup</span><b>{pend_sum}</b></div>"
+                   f"<div class='kp'><span>Booked (4 wks)</span><b>{book_sum}</b></div>"
+                   f"<div class='kp {'bad' if short_units else ''}'><span>Short (units)</span>"
+                   f"<b>{short_units}</b></div></div><div class='rmk {rcls}'>{remark}</div>")
             inner.append(f"""
       <div class="card" data-zone="{zid}" data-badge="{badge}">
         <div class="chd"><span class="code">{html.escape(l['code'])}</span>
           <span class="badge {badge}">{badge.upper()}</span></div>
-        <table><thead><tr><th></th>{head}</tr></thead><tbody>{''.join(rows)}</tbody></table>
+        <div class="scroll"><table><thead><tr><th></th>{head}</tr></thead><tbody>{''.join(rows)}</tbody></table></div>
+        {kpi}
       </div>""")
         cards.append(f"""
     <section class="zone" data-zone="{zid}">
@@ -765,7 +813,11 @@ header h1{{margin:0;font-size:20px}}header .sub{{color:#c7d2e0;font-size:12.5px;
 .controls button.on{{background:var(--navy);color:#fff;border-color:var(--navy)}}
 .zone{{padding:6px 26px 20px}}.zone h2{{font-size:15px;margin:14px 0 8px;color:var(--navy)}}
 .zone h2 small{{color:var(--mute);font-weight:normal;font-size:12px}}
-.grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}}
+.grid{{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}}
+@media (max-width:1639px){{.grid{{grid-template-columns:repeat(2,minmax(0,1fr))}}}}
+@media (max-width:1119px){{.grid{{grid-template-columns:minmax(0,1fr)}}}}
+.slot{{display:none}}@media (min-width:1640px){{.slot{{display:block}}}}
+.scroll{{overflow-x:auto}}
 .nobk-table{{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:9px;overflow:hidden;font-size:12.5px}}
 .nobk-table th,.nobk-table td{{padding:7px 10px;text-align:center;border-bottom:1px solid #eef1f5}}
 .nobk-table thead th{{background:#6B7280;color:#fff;font-weight:700}}
@@ -776,9 +828,16 @@ header h1{{margin:0;font-size:20px}}header .sub{{color:#c7d2e0;font-size:12.5px;
 .chd .code{{font-weight:700}}
 .badge{{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px}}
 .badge.ok{{background:#1E8E5A}}.badge.watch{{background:var(--neg)}}
-table{{width:100%;border-collapse:collapse;font-size:12px}}
-th,td{{padding:4px 6px;text-align:center;border-bottom:1px solid #eef1f5}}
-tbody th{{text-align:left;font-weight:600;color:var(--mute);white-space:nowrap}}
+table{{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}}
+th,td{{padding:7px 4px;text-align:center;border-bottom:1px solid #eef1f5}}
+thead th{{font-weight:700;padding-top:9px;padding-bottom:9px}}
+tbody th{{text-align:left;font-weight:600;color:var(--mute);white-space:nowrap;padding-left:10px;width:112px}}
+td.z{{color:#a9b4c1}}
+.cft{{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:10px 12px;background:var(--card);border-top:1px solid var(--line)}}
+.kp span{{display:block;font-size:10.5px;color:var(--mute)}}.kp b{{font-size:16px;color:var(--navy)}}
+.kp.bad b{{color:var(--neg)}}
+.rmk{{padding:8px 12px;font-size:12px;border-top:1px solid var(--line)}}
+.rmk.bad{{background:#FDECEC;color:#8E1F1F}}.rmk.ok{{background:#EAF6EF;color:#17724A}}
 thead th.re,td.re{{color:var(--re)}}thead th.otfr,td.otfr{{color:var(--otfr)}}
 tr.stockrow{{background:var(--card)}}tr.stockrow th{{color:var(--ink)}}
 tr.avrow{{background:var(--av)}}tr.avrow th{{color:var(--ink)}}
