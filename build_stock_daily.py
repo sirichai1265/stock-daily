@@ -685,6 +685,7 @@ def build_html(model, out: Path):
              if not l.get("has_booking", True) and l["key"] not in ALWAYS_FULL_BLOCK]
 
     cards = []
+    summary_rows = []
     for zid, zname in zones:
         zlocs = [l for l in with_bkg if l["zone"] == zid]
         if not zlocs:
@@ -712,10 +713,10 @@ def build_html(model, out: Path):
                 return f"<tr class='{extra}'><th>{lbl}</th>{tds}</tr>"
             rows = [row("Stock empty", lambda d: t[d]["stock"], "stockrow")]
             rows.append(row(f"Pending · WK{wk[0]}", lambda d: t[d]["pending"]))
-            rows.append(row(f"WK{wk[0]} · {wsp[0]}", lambda d: t[d]["wk"][0]))
+            rows.append(row(f"WK{wk[0]}<small>{wsp[0]}</small>", lambda d: t[d]["wk"][0]))
             rows.append(row(f"AV bal · {_md(model['weeks'][0][1])}", lambda d: t[d]["av"][0], "avrow"))
             for i in (1, 2, 3):
-                rows.append(row(f"WK{wk[i]} · {wsp[i]}", lambda d, i=i: t[d]["wk"][i]))
+                rows.append(row(f"WK{wk[i]}<small>{wsp[i]}</small>", lambda d, i=i: t[d]["wk"][i]))
                 rows.append(row(f"AV bal · {_md(model['weeks'][i][1])}",
                                 lambda d, i=i: t[d]["av"][i], "avrow"))
             stock_sum = sum(t[d]["stock"] for d in DISP_ORDER)
@@ -739,11 +740,10 @@ def build_html(model, out: Path):
             else:
                 remark = "<b>Remark:</b> ✔ enough stock for all bookings in the next 4 weeks"
                 rcls = "ok"
-            kpi = (f"<div class='cft'><div class='kp'><span>Stock</span><b>{stock_sum}</b></div>"
-                   f"<div class='kp'><span>Overdue pickup</span><b>{pend_sum}</b></div>"
-                   f"<div class='kp'><span>Booked (4 wks)</span><b>{book_sum}</b></div>"
-                   f"<div class='kp {'bad' if short_units else ''}'><span>Short (units)</span>"
-                   f"<b>{short_units}</b></div></div><div class='rmk {rcls}'>{remark}</div>")
+            kpi = f"<div class='rmk {rcls}'>{remark}</div>"
+            summary_rows.append((zid, l["code"], stock_sum, pend_sum,
+                                 [sum(t[d]["wk"][i] for d in DISP_ORDER) for i in range(4)],
+                                 book_sum, short_units, badge))
             inner.append(f"""
       <div class="card" data-zone="{zid}" data-badge="{badge}">
         <div class="chd"><span class="code">{html.escape(l['code'])}</span>
@@ -755,6 +755,28 @@ def build_html(model, out: Path):
     <section class="zone" data-zone="{zid}">
       <h2>{zid} <small>{zname}</small></h2>
       <div class="grid">{''.join(inner)}</div>
+    </section>""")
+
+    if summary_rows:
+        srows = []
+        for zid, code, stk, pnd, wkb, bk, sh, bdg in summary_rows:
+            srows.append(
+                f"<tr><th>{html.escape(code)}</th><td class='l'>{zid}</td><td><b>{stk}</b></td><td>{pnd}</td>"
+                + "".join(f"<td>{v}</td>" for v in wkb)
+                + f"<td><b>{bk}</b></td><td class='{'neg' if sh else ''}'>{sh}</td>"
+                f"<td><span class='badge {bdg}'>{bdg.upper()}</span></td></tr>")
+        tot = [sum(r[i] for r in summary_rows) for i in (2, 3)]
+        totw = [sum(r[4][i] for r in summary_rows) for i in range(4)]
+        srows.append("<tr style='font-weight:700;background:var(--av)'><th>TOTAL</th><td></td>"
+                     f"<td>{tot[0]}</td><td>{tot[1]}</td>" + "".join(f"<td>{v}</td>" for v in totw)
+                     + f"<td>{sum(r[5] for r in summary_rows)}</td><td>{sum(r[6] for r in summary_rows)}</td><td></td></tr>")
+        wkh = "".join(f"<th>WK{wk[i]}<br><small>{wsp[i]}</small></th>" for i in range(4))
+        cards.insert(0, f"""
+    <section class="zone">
+      <h2>Summary by location <small>stock, overdue pickup and bookings per week (all types)</small></h2>
+      <table class="nobk-table"><thead><tr><th>Location</th><th>Zone</th><th>Stock</th><th>Overdue<br>pickup</th>{wkh}
+      <th>Booked<br>4 wks</th><th>Short<br>(units)</th><th>Status</th></tr></thead>
+      <tbody>{''.join(srows)}</tbody></table>
     </section>""")
 
     if no_bkg:
@@ -814,9 +836,17 @@ header h1{{margin:0;font-size:20px}}header .sub{{color:#c7d2e0;font-size:12.5px;
 .zone{{padding:6px 26px 20px}}.zone h2{{font-size:15px;margin:14px 0 8px;color:var(--navy)}}
 .zone h2 small{{color:var(--mute);font-weight:normal;font-size:12px}}
 .grid{{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}}
-@media (max-width:1639px){{.grid{{grid-template-columns:repeat(2,minmax(0,1fr))}}}}
-@media (max-width:1119px){{.grid{{grid-template-columns:minmax(0,1fr)}}}}
-.slot{{display:none}}@media (min-width:1640px){{.slot{{display:block}}}}
+@media (max-width:1249px){{.grid{{grid-template-columns:repeat(2,minmax(0,1fr))}}}}
+@media (max-width:760px){{.grid{{grid-template-columns:minmax(0,1fr)}}}}
+.slot{{display:none}}@media (min-width:1250px){{.slot{{display:block}}}}
+.grid table{{table-layout:fixed;font-size:11.5px}}
+.grid th,.grid td{{padding:5px 1px}}
+.grid thead th{{font-size:11px;padding-top:7px;padding-bottom:7px}}
+.grid thead th:first-child,.grid tbody th{{width:90px}}
+.grid tbody th{{padding-left:8px;font-size:11px;line-height:1.2}}
+.grid tbody th small{{display:block;font-weight:500;font-size:10px;color:#8793a1}}
+.grid .chd{{padding:7px 10px}}
+.nobk-table td.l{{text-align:left}}.nobk-table td.neg{{color:var(--neg);font-weight:700}}
 .scroll{{overflow-x:auto}}
 .nobk-table{{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:9px;overflow:hidden;font-size:12.5px}}
 .nobk-table th,.nobk-table td{{padding:7px 10px;text-align:center;border-bottom:1px solid #eef1f5}}
@@ -836,7 +866,7 @@ td.z{{color:#a9b4c1}}
 .cft{{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:10px 12px;background:var(--card);border-top:1px solid var(--line)}}
 .kp span{{display:block;font-size:10.5px;color:var(--mute)}}.kp b{{font-size:16px;color:var(--navy)}}
 .kp.bad b{{color:var(--neg)}}
-.rmk{{padding:8px 12px;font-size:12px;border-top:1px solid var(--line)}}
+.rmk{{padding:7px 10px;font-size:11.5px;border-top:1px solid var(--line)}}
 .rmk.bad{{background:#FDECEC;color:#8E1F1F}}.rmk.ok{{background:#EAF6EF;color:#17724A}}
 thead th.re,td.re{{color:var(--re)}}thead th.otfr,td.otfr{{color:var(--otfr)}}
 tr.stockrow{{background:var(--card)}}tr.stockrow th{{color:var(--ink)}}
