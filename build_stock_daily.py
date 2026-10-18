@@ -52,6 +52,9 @@ ALWAYS_FULL_BLOCK = {"BKK02", "LCH55"}
 LOCATION_ORDER = {"BKK": ["BKK25", "BKK01", "BKK02", "BKK27", "LCH54", "LCH55"], "LCH": []}
 # HTML dashboard card grid, 3 per row, in this order (user request 2026-10-18); a missing code keeps
 # its slot empty so the rest stay in place; codes not listed (e.g. BKKY5) follow after.
+# row order of the dashboard's "Summary by location" table (user request 2026-10-18); unlisted codes
+# (e.g. BKKY5) go after the listed ones of their zone.
+HTML_SUMMARY_ORDER = ["BKK01+BKK04", "BKK02", "BKK25", "BKK27", "LCH54", "LCH55", "LCH27", "LCH28", "LCHY5"]
 HTML_CARD_ORDER = {"BKK": ["BKK01+BKK04", "BKK02", "LCH54", "BKK25", "BKK27", "LCH55"],
                    "LCH": ["LCH27", "LCH28", "LCHY5"]}
 # yard/depot name shown after the location code in each block's title band
@@ -759,7 +762,9 @@ def build_html(model, out: Path):
 
     if summary_rows:
         loc_idx = {l["code"]: i for i, l in enumerate(model["locations"])}
-        summary_rows.sort(key=lambda r: loc_idx[r[1]])   # model order: ..., BKK27, LCH54, LCH55, ...
+        summary_rows.sort(key=lambda r: (r[0] != "BKK",
+                                         HTML_SUMMARY_ORDER.index(r[1]) if r[1] in HTML_SUMMARY_ORDER else 99,
+                                         loc_idx[r[1]]))
         srows = []
         for zid, code, stk, pnd, wkb, bk, sh, bdg in summary_rows:
             srows.append(
