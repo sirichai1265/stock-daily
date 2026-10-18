@@ -760,6 +760,7 @@ def build_html(model, out: Path):
       <div class="grid">{''.join(inner)}</div>
     </section>""")
 
+    n_zone_sections = len(cards)
     if summary_rows:
         loc_idx = {l["code"]: i for i, l in enumerate(model["locations"])}
         summary_rows.sort(key=lambda r: (r[0] != "BKK",
@@ -820,6 +821,18 @@ def build_html(model, out: Path):
       <table class="nobk-table"><thead><tr><th>ETA</th><th>Location</th><th>Vessel / Voy</th><th>POL</th>{ehead}</tr></thead>
       <tbody>{''.join(erows)}</tbody></table>
     </section>""")
+
+    controls_html = (
+        '<div class="controls">'
+        '<span style="font-size:12px;color:var(--mute)">Zone:</span>'
+        '<button data-f="zone" data-v="all" class="on">All</button>'
+        '<button data-f="zone" data-v="BKK">BKK</button>'
+        '<button data-f="zone" data-v="LCH">LCH</button>'
+        '<span style="font-size:12px;color:var(--mute);margin-left:10px">Show:</span>'
+        '<button data-f="badge" data-v="all" class="on">All</button>'
+        '<button data-f="badge" data-v="ok">OK only</button>'
+        '<button data-f="badge" data-v="watch">Watch only</button></div>')
+    cards.insert(len(cards) - n_zone_sections, controls_html)   # Zone/Show filters sit right above the BKK section
 
     total_stock = sum(t["stock"] for l in model["locations"] for t in l["types"].values())
     total_pend = sum(t["pending"] for l in model["locations"] for t in l["types"].values())
@@ -889,16 +902,6 @@ footer{{padding:14px 26px;color:var(--mute);font-size:11px}}
   <div class="kpi"><b>{total_pend}</b><span>total pending pickup (overdue)</span></div>
   <div class="kpi"><b>{len(watch_locs)}</b><span>locations with negative AV balance</span></div>
   <div class="kpi"><b>{html.escape(', '.join(watch_locs) or '—')}</b><span>watch list</span></div>
-</div>
-<div class="controls">
-  <span style="font-size:12px;color:var(--mute)">Zone:</span>
-  <button data-f="zone" data-v="all" class="on">All</button>
-  <button data-f="zone" data-v="BKK">BKK</button>
-  <button data-f="zone" data-v="LCH">LCH</button>
-  <span style="font-size:12px;color:var(--mute);margin-left:10px">Show:</span>
-  <button data-f="badge" data-v="all" class="on">All</button>
-  <button data-f="badge" data-v="ok">OK only</button>
-  <button data-f="badge" data-v="watch">Watch only</button>
 </div>
 {''.join(cards)}
 <footer>Stock = empty containers in yard now (snapshot). Booking = pickups by TRAN DT.
