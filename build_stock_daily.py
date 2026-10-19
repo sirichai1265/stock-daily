@@ -71,6 +71,8 @@ YARD_NAME = {
 }
 # location codes to drop from the report entirely (not real/tracked yards) -
 # user request
+# STAYING rows whose "Move Code" is one of these are not counted as stock (user request 2026-10-19)
+EXCLUDE_MOVE_CODES = {"OEP", "OEV", "OEW"}
 EXCLUDE_LOCATIONS = {"LCH20"}
 
 NAVY = "0C2340"
@@ -103,6 +105,12 @@ def load_stock(path: Path):
     df = df[df["Location"].notna() & df["Size/Type"].notna()]
     if "Full/Empty" in df.columns:
         df = df[df["Full/Empty"].astype(str).str.strip().str.upper() == "E"]
+    if "Move Code" in df.columns:
+        mc = df["Move Code"].astype(str).str.strip().str.upper()
+        dropped = int(mc.isin(EXCLUDE_MOVE_CODES).sum())
+        if dropped:
+            print(f"stock: excluded {dropped} empties with Move Code in {sorted(EXCLUDE_MOVE_CODES)}")
+        df = df[~mc.isin(EXCLUDE_MOVE_CODES)]
     df["loc"] = df["Location"].astype(str).str.strip().str.upper().replace(MERGES)
     df["disp"] = df["Size/Type"].astype(str).str.strip().str.upper().map(SIZE2DISP)
     df = df[df["disp"].notna()]
