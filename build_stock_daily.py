@@ -54,6 +54,8 @@ LOCATION_ORDER = {"BKK": ["BKK25", "BKK01", "BKK02", "BKK27", "LCH54", "LCH55"],
 # its slot empty so the rest stay in place; codes not listed (e.g. BKKY5) follow after.
 # row order of the dashboard's "Summary by location" table (user request 2026-10-18); unlisted codes
 # (e.g. BKKY5) go after the listed ones of their zone.
+# rows highlighted red on the Excel "TEU Summary" sheet (user request 2026-10-19)
+TEU_RED_ROWS = {"BKK25", "BKK27", "LCH27", "LCH28", "LCHY5"}
 HTML_SUMMARY_ORDER = ["BKK01+BKK04", "BKK02", "BKK25", "BKK27", "LCH54", "LCH55", "LCH27", "LCH28", "LCHY5"]
 HTML_CARD_ORDER = {"BKK": ["BKK01+BKK04", "BKK02", "LCH54", "BKK25", "BKK27", "LCH55"],
                    "LCH": ["LCH27", "LCH28", "LCHY5"]}
@@ -464,7 +466,13 @@ def teu_rows(model):
     """Per-location 20'/40' empty-stock counts and TEUs (20'=1 TEU, 40'=2 TEU)."""
     rows = []
     t20 = t40 = 0
-    for l in model["locations"]:
+    loc_idx = {l["code"]: i for i, l in enumerate(model["locations"])}
+    # same order as the dashboard summary table: BKK01+BKK04, BKK02, BKK25, BKK27, LCH54, LCH55, LCH27, ...
+    ordered = sorted(model["locations"],
+                     key=lambda l: (l["zone"] != "BKK",
+                                    HTML_SUMMARY_ORDER.index(l["code"]) if l["code"] in HTML_SUMMARY_ORDER else 99,
+                                    loc_idx[l["code"]]))
+    for l in ordered:
         c20 = sum(l["types"][d]["stock"] for d in SIZE20)
         c40 = sum(l["types"][d]["stock"] for d in SIZE40)
         rows.append((l["code"], c20, c40, c20 + c40, c20 + 2 * c40))
@@ -496,6 +504,9 @@ def _write_teu_summary(wb, model):
             cell.alignment = Alignment(horizontal="center" if cc > 1 else "left")
             if is_total:
                 cell.fill = PatternFill("solid", fgColor=AV_BG)
+            elif code in TEU_RED_ROWS:
+                cell.fill = PatternFill("solid", fgColor="FFC7CE")
+                cell.font = Font(name="Calibri", size=11, bold=True, color="9C0006")
     widths = [16, 11, 11, 13, 12]
     for i, w in enumerate(widths):
         ws.column_dimensions[get_column_letter(i + 1)].width = w
