@@ -56,6 +56,9 @@ LOCATION_ORDER = {"BKK": ["BKK25", "BKK01", "BKK02", "BKK27", "LCH54", "LCH55"],
 # (e.g. BKKY5) go after the listed ones of their zone.
 # rows highlighted red on the Excel "TEU Summary" sheet (user request 2026-10-19)
 TEU_RED_ROWS = {"BKK25", "BKK27", "LCH27", "LCH28", "LCHY5"}
+# weeks shown in the BKK / LCH cards (dashboard + email), their remark and OK/WATCH status (user request 2026-10-22:
+# the booking export only covers 3 weeks). The Excel sheet and the weekly columns of the summary table keep 4.
+HTML_WEEKS = 3
 HTML_SUMMARY_ORDER = ["BKK01+BKK04", "BKK02", "BKK25", "BKK27", "LCH54", "LCH55", "LCH27", "LCH28", "LCHY5"]
 HTML_CARD_ORDER = {"BKK": ["BKK01+BKK04", "BKK02", "LCH54", "BKK25", "BKK27", "LCH55"],
                    "LCH": ["LCH27", "LCH28", "LCHY5"]}
@@ -725,7 +728,7 @@ def build_html(model, out: Path):
                 continue
             t = l["types"]
             active = list(DISP_ORDER)   # always show all 9 types - user request
-            worst = min((t[d]["av"][i] for d in DISP_ORDER for i in range(4)), default=0)
+            worst = min((t[d]["av"][i] for d in DISP_ORDER for i in range(HTML_WEEKS)), default=0)
             badge = "watch" if worst < 0 else "ok"
             head = "".join(f"<th class='{cls(d)}'>{html.escape(d)}</th>" for d in active)
             def row(lbl, fn, extra=""):
@@ -737,7 +740,7 @@ def build_html(model, out: Path):
             rows.append(row(f"Pending · WK{wk[0]}", lambda d: t[d]["pending"]))
             rows.append(row(f"WK{wk[0]}<small>{wsp[0]}</small>", lambda d: t[d]["wk"][0]))
             rows.append(row(f"AV bal · {_md(model['weeks'][0][1])}", lambda d: t[d]["av"][0], "avrow"))
-            for i in (1, 2, 3):
+            for i in range(1, HTML_WEEKS):
                 rows.append(row(f"WK{wk[i]}<small>{wsp[i]}</small>", lambda d, i=i: t[d]["wk"][i]))
                 rows.append(row(f"AV bal · {_md(model['weeks'][i][1])}",
                                 lambda d, i=i: t[d]["av"][i], "avrow"))
@@ -747,9 +750,9 @@ def build_html(model, out: Path):
             short_items = []
             short_units = 0
             for d in DISP_ORDER:
-                mn = min(t[d]["av"])
+                mn = min(t[d]["av"][:HTML_WEEKS])
                 if mn < 0:
-                    first = next(i for i, v in enumerate(t[d]["av"]) if v < 0)
+                    first = next(i for i, v in enumerate(t[d]["av"][:HTML_WEEKS]) if v < 0)
                     short_units += -mn
                     short_items.append((mn, f"{d} {mn} from WK{wk[first]} (by {_md(model['weeks'][first][1])})"))
             short_items.sort()
@@ -757,10 +760,10 @@ def build_html(model, out: Path):
                 remark = ("<b>Remark:</b> ⚠ short \u2013 " + "; ".join(x[1] for x in short_items))
                 rcls = "bad"
             elif not (pend_sum or book_sum):
-                remark = "<b>Remark:</b> no active bookings in the next 4 weeks"
+                remark = "<b>Remark:</b> no active bookings in the next 3 weeks"
                 rcls = "ok"
             else:
-                remark = "<b>Remark:</b> ✔ enough stock for all bookings in the next 4 weeks"
+                remark = "<b>Remark:</b> ✔ enough stock for all bookings in the next 3 weeks"
                 rcls = "ok"
             kpi = f"<div class='rmk {rcls}'>{remark}</div>"
             summary_rows.append((zid, l["code"], stock_sum, pend_sum,
@@ -972,9 +975,9 @@ def build_email_html(model) -> str:
         t = l["types"]
         short_items, short_units = [], 0
         for d in DISP_ORDER:
-            mn = min(t[d]["av"])
+            mn = min(t[d]["av"][:HTML_WEEKS])
             if mn < 0:
-                first = next(i for i, v in enumerate(t[d]["av"]) if v < 0)
+                first = next(i for i, v in enumerate(t[d]["av"][:HTML_WEEKS]) if v < 0)
                 short_units += -mn
                 short_items.append((mn, f"{d} {mn} from WK{wk[first]} (by {_md(weeks[first][1])})"))
         short_items.sort()
@@ -1047,7 +1050,7 @@ def build_email_html(model) -> str:
 
         body = [row("Stock empty", lambda d: t[d]["stock"], GREY, True),
                 row(f"Pending &middot; WK{wk[0]}", lambda d: t[d]["pending"])]
-        for k in range(4):
+        for k in range(HTML_WEEKS):
             lab = f"WK{wk[k]}<br><span style='font-weight:normal;font-size:9px;color:#8793A1'>{wsp[k]}</span>"
             body.append(row(lab, lambda d, k=k: t[d]["wk"][k]))
             body.append(row(f"AV bal &middot; {_md(weeks[k][1])}", lambda d, k=k: t[d]["av"][k], "#FFF6C8", True))
@@ -1055,9 +1058,9 @@ def build_email_html(model) -> str:
             remark = "<b>Remark:</b> &#9888; short &ndash; " + "; ".join(E(x[1]) for x in i["items"])
             rbg, rcol = "#FDECEC", "#8E1F1F"
         elif not (i["pend"] or i["book"]):
-            remark, rbg, rcol = "<b>Remark:</b> no active bookings in the next 4 weeks", "#EAF6EF", "#17724A"
+            remark, rbg, rcol = "<b>Remark:</b> no active bookings in the next 3 weeks", "#EAF6EF", "#17724A"
         else:
-            remark, rbg, rcol = "<b>Remark:</b> &#10004; enough stock for all bookings in the next 4 weeks", "#EAF6EF", "#17724A"
+            remark, rbg, rcol = "<b>Remark:</b> &#10004; enough stock for all bookings in the next 3 weeks", "#EAF6EF", "#17724A"
         return (f"<table cellpadding='0' cellspacing='0' border='0' width='{W0 + WT * 9 + 2}' "
                 "style='border-collapse:collapse;border:1px solid #D5DDE6'>"
                 f"<tr bgcolor='{NAVY_}'><td colspan='9' style='{FONT}color:#FFFFFF;font-size:13px;font-weight:bold;padding:6px 8px'>"
