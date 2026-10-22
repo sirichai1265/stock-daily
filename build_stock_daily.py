@@ -56,9 +56,10 @@ LOCATION_ORDER = {"BKK": ["BKK25", "BKK01", "BKK02", "BKK27", "LCH54", "LCH55"],
 # (e.g. BKKY5) go after the listed ones of their zone.
 # rows highlighted red on the Excel "TEU Summary" sheet (user request 2026-10-19)
 TEU_RED_ROWS = {"BKK25", "BKK27", "LCH27", "LCH28", "LCHY5"}
-# weeks shown in the BKK / LCH cards (dashboard + email), their remark and OK/WATCH status (user request 2026-10-22:
-# the booking export only covers 3 weeks). The Excel sheet and the weekly columns of the summary table keep 4.
-HTML_WEEKS = 3
+# Weeks covered everywhere (Excel, dashboard, email, model) - 3 since 2026-10-22 (user request; the booking
+# export only covers 3 weeks).
+NUM_WEEKS = 3
+HTML_WEEKS = NUM_WEEKS
 HTML_SUMMARY_ORDER = ["BKK01+BKK04", "BKK02", "BKK25", "BKK27", "LCH54", "LCH55", "LCH27", "LCH28", "LCHY5"]
 HTML_CARD_ORDER = {"BKK": ["BKK01+BKK04", "BKK02", "LCH54", "BKK25", "BKK27", "LCH55"],
                    "LCH": ["LCH27", "LCH28", "LCHY5"]}
@@ -92,7 +93,7 @@ RE_FONT = "1F4E9C"
 OTFR_FONT = "7A4B12"
 NEG_FONT = "C22A2A"
 
-BLOCK_H = 13
+BLOCK_H = 7 + 2 * (NUM_WEEKS - 1)   # title, head, stock, pending, today, rest, AV1 + (booking, AV) per extra week
 LANE_STARTS = {0: 1, 1: 13, 2: 25}             # A / M / Y
 GAP_COLS = [12, 24]
 MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -214,7 +215,7 @@ def empty_repo_groups(er: pd.DataFrame) -> list[dict]:
 
 def week_frame(today: dt.date):
     mon1 = today - dt.timedelta(days=today.weekday())
-    weeks = [(mon1 + dt.timedelta(days=7 * i), mon1 + dt.timedelta(days=7 * i + 5)) for i in range(4)]
+    weeks = [(mon1 + dt.timedelta(days=7 * i), mon1 + dt.timedelta(days=7 * i + 5)) for i in range(NUM_WEEKS)]
     return weeks, today + dt.timedelta(days=1)
 
 
@@ -251,7 +252,7 @@ def build_model(stock_agg, bkg: pd.DataFrame, today: dt.date):
             for a, bb in weeks[1:]:
                 wk.append(int(sub.loc[(sub["d"] >= a) & (sub["d"] <= bb), disp].sum()) if len(sub) else 0)
             av, run = [], stock - pend
-            for i in range(4):
+            for i in range(NUM_WEEKS):
                 run -= wk[i]
                 av.append(run)
             types[disp] = dict(stock=stock, pending=pend, today=t0, wk1rest=rest, wk=wk, av=av)
@@ -294,10 +295,10 @@ def build_excel(model, stock_agg, stock_raw, bkg, out: Path, override_date: dt.d
     ws["A3"], ws["B3"], ws["C3"], ws["D3"] = "WK#", "Monday", "Saturday", "Week no"
     ws["B4"] = "=$B$1-(WEEKDAY($B$1,2)-1)"
     ws["C4"] = "=$B$4+5"
-    for r in (5, 6, 7):
+    for r in range(5, 4 + NUM_WEEKS):
         ws[f"B{r}"] = f"=$B${r-1}+7"
         ws[f"C{r}"] = f"=$B${r}+5"
-    for r in (4, 5, 6, 7):
+    for r in range(4, 4 + NUM_WEEKS):
         ws[f"A{r}"] = f"=WEEKNUM($B${r},21)"
         ws[f"D{r}"] = f"=WEEKNUM($B${r},21)"
         ws[f"B{r}"].number_format = ws[f"C{r}"].number_format = "yyyy-mm-dd"
@@ -594,7 +595,8 @@ def _write_block(sm, loc, c0, top, F, FB, thin, med):
     cT0 = c0 + 2
     r_title, r_head, r_stock, r_pend = top, top + 1, top + 2, top + 3
     r_t0, r_rest, r_av1 = top + 4, top + 5, top + 6
-    r_w2, r_av2, r_w3, r_av3, r_w4, r_av4 = [top + i for i in range(7, 13)]
+    r_w2, r_av2, r_w3, r_av3 = [top + i for i in range(7, 11)]
+    r_av_last = r_av3
 
     yard = YARD_NAME.get(label)
     tc = sm.cell(r_title, c0, f"{label}   {yard}" if yard else label)
@@ -633,11 +635,10 @@ def _write_block(sm, loc, c0, top, F, FB, thin, med):
             f'"Booking on "&{range_label("Control!$B$9", "Control!$C$4")})').font = F
     sm.cell(r_av1, cN, f'="AV Balance till "&DAY(Control!$C$4)&" "&{mn("Control!$C$4")}').font = FB
     for rr, wkc, mon, sat in ((r_w2, "$A$5", "Control!$B$5", "Control!$C$5"),
-                              (r_w3, "$A$6", "Control!$B$6", "Control!$C$6"),
-                              (r_w4, "$A$7", "Control!$B$7", "Control!$C$7")):
+                              (r_w3, "$A$6", "Control!$B$6", "Control!$C$6")):
         sm.cell(rr, c0, f"=Control!{wkc}").font = F
         sm.cell(rr, cN, f'="Booking on "&{range_label(mon, sat)}').font = F
-    for rr, cref in ((r_av2, "$C$5"), (r_av3, "$C$6"), (r_av4, "$C$7")):
+    for rr, cref in ((r_av2, "$C$5"), (r_av3, "$C$6")):
         sm.cell(rr, cN, f'="AV Balance till "&DAY(Control!{cref})&" "&{mn("Control!"+cref)}').font = FB
 
     for i, disp in enumerate(DISP_ORDER):
@@ -650,7 +651,6 @@ def _write_block(sm, loc, c0, top, F, FB, thin, med):
             (r_rest, '">="&Control!$B$9,BookingRaw!$B$2:$B$1200,"<="&Control!$C$4'),
             (r_w2, '">="&Control!$B$5,BookingRaw!$B$2:$B$1200,"<="&Control!$C$5'),
             (r_w3, '">="&Control!$B$6,BookingRaw!$B$2:$B$1200,"<="&Control!$C$6'),
-            (r_w4, '">="&Control!$B$7,BookingRaw!$B$2:$B$1200,"<="&Control!$C$7'),
         ):
             e = sm.cell(rr, cc, sumifs(BL, extra))
             e.font = Font(name="Calibri", size=11,
@@ -659,26 +659,25 @@ def _write_block(sm, loc, c0, top, F, FB, thin, med):
         sm.cell(r_av1, cc, f"={TL}{r_stock}-{TL}{r_pend}-{TL}{r_t0}-{TL}{r_rest}")
         sm.cell(r_av2, cc, f"={TL}{r_av1}-{TL}{r_w2}")
         sm.cell(r_av3, cc, f"={TL}{r_av2}-{TL}{r_w3}")
-        sm.cell(r_av4, cc, f"={TL}{r_av3}-{TL}{r_w4}")
         avv = loc["types"][disp]["av"]
-        for k, rr in enumerate((r_av1, r_av2, r_av3, r_av4)):
+        for k, rr in enumerate((r_av1, r_av2, r_av3)):
             cell = sm.cell(rr, cc)
             neg = avv[k] < 0
             cell.font = Font(name="Calibri", size=11, bold=neg, color=NEG_FONT if neg else "000000")
             cell.alignment = Alignment(horizontal="center")
 
-    for rr in (r_av1, r_av2, r_av3, r_av4):
+    for rr in (r_av1, r_av2, r_av3):
         for cc in range(c0, c0 + 11):
             sm.cell(rr, cc).fill = PatternFill("solid", fgColor=AV_BG)
 
-    for rr in range(r_title, r_av4 + 1):
+    for rr in range(r_title, r_av_last + 1):
         for cc in range(c0, c0 + 11):
             cell = sm.cell(rr, cc)
             cell.border = Border(
                 left=med if cc == c0 else thin,
                 right=med if cc == c0 + 10 else thin,
                 top=med if rr == r_title else thin,
-                bottom=med if rr == r_av4 else thin,
+                bottom=med if rr == r_av_last else thin,
             )
 
 
@@ -697,7 +696,7 @@ def _rng(a, b):
 
 def build_html(model, out: Path):
     wk = model["iso_weeks"]
-    wsp = [_rng(*model["weeks"][i]) for i in range(4)]
+    wsp = [_rng(*model["weeks"][i]) for i in range(NUM_WEEKS)]
     rdate = _md(model["date"]) + " " + model["date"][:4]
     zones = [("BKK", "Bangkok area depots"), ("LCH", "Laem Chabang area depots")]
 
@@ -746,7 +745,7 @@ def build_html(model, out: Path):
                                 lambda d, i=i: t[d]["av"][i], "avrow"))
             stock_sum = sum(t[d]["stock"] for d in DISP_ORDER)
             pend_sum = sum(t[d]["pending"] for d in DISP_ORDER)
-            book_sum = sum(sum(t[d]["wk"]) for d in DISP_ORDER)
+            book_sum = sum(sum(t[d]["wk"][:NUM_WEEKS]) for d in DISP_ORDER)
             short_items = []
             short_units = 0
             for d in DISP_ORDER:
@@ -767,7 +766,7 @@ def build_html(model, out: Path):
                 rcls = "ok"
             kpi = f"<div class='rmk {rcls}'>{remark}</div>"
             summary_rows.append((zid, l["code"], stock_sum, pend_sum,
-                                 [sum(t[d]["wk"][i] for d in DISP_ORDER) for i in range(4)],
+                                 [sum(t[d]["wk"][i] for d in DISP_ORDER) for i in range(NUM_WEEKS)],
                                  book_sum, short_units, badge))
             inner.append(f"""
       <div class="card" data-zone="{zid}" data-badge="{badge}">
@@ -796,16 +795,16 @@ def build_html(model, out: Path):
                 + f"<td><b>{bk}</b></td><td class='{'neg' if sh else ''}'>{sh}</td>"
                 f"<td><span class='badge {bdg}'>{bdg.upper()}</span></td></tr>")
         tot = [sum(r[i] for r in summary_rows) for i in (2, 3)]
-        totw = [sum(r[4][i] for r in summary_rows) for i in range(4)]
+        totw = [sum(r[4][i] for r in summary_rows) for i in range(NUM_WEEKS)]
         srows.append("<tr style='font-weight:700;background:var(--av)'><th>TOTAL</th><td></td>"
                      f"<td>{tot[0]}</td><td>{tot[1]}</td>" + "".join(f"<td>{v}</td>" for v in totw)
                      + f"<td>{sum(r[5] for r in summary_rows)}</td><td>{sum(r[6] for r in summary_rows)}</td><td></td></tr>")
-        wkh = "".join(f"<th>WK{wk[i]}<br><small>{wsp[i]}</small></th>" for i in range(4))
+        wkh = "".join(f"<th>WK{wk[i]}<br><small>{wsp[i]}</small></th>" for i in range(NUM_WEEKS))
         cards.insert(0, f"""
     <section class="zone">
       <h2>Summary by location <small>stock, overdue pickup and bookings per week (all types)</small></h2>
       <table class="nobk-table"><thead><tr><th>Location</th><th>Zone</th><th>Stock</th><th>Overdue<br>pickup</th>{wkh}
-      <th>Booked<br>4 wks</th><th>Short<br>(units)</th><th>Status</th></tr></thead>
+      <th>Booked<br>{NUM_WEEKS} wks</th><th>Short<br>(units)</th><th>Status</th></tr></thead>
       <tbody>{''.join(srows)}</tbody></table>
     </section>""")
 
@@ -859,7 +858,7 @@ def build_html(model, out: Path):
     total_stock = sum(t["stock"] for l in model["locations"] for t in l["types"].values())
     total_pend = sum(t["pending"] for l in model["locations"] for t in l["types"].values())
     watch_locs = [l["code"] for l in model["locations"]
-                  if min((l["types"][d]["av"][i] for d in DISP_ORDER for i in range(4)), default=0) < 0]
+                  if min((l["types"][d]["av"][i] for d in DISP_ORDER for i in range(NUM_WEEKS)), default=0) < 0]
 
     page = f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -954,7 +953,7 @@ def build_email_html(model) -> str:
     E = html.escape
     wk = model["iso_weeks"]
     weeks = model["weeks"]
-    wsp = [_rng(*weeks[i]) for i in range(4)]
+    wsp = [_rng(*weeks[i]) for i in range(NUM_WEEKS)]
     rdate = _md(model["date"]) + " " + model["date"][:4]
     NAVY_, GREY, ZERO = "#0C2340", "#F3F5F8", "#A9B4C1"
     FONT = "font-family:Segoe UI,Calibri,Arial,sans-serif;"
@@ -984,7 +983,7 @@ def build_email_html(model) -> str:
         info[l["code"]] = {
             "stock": sum(t[d]["stock"] for d in DISP_ORDER),
             "pend": sum(t[d]["pending"] for d in DISP_ORDER),
-            "wkb": [sum(t[d]["wk"][i] for d in DISP_ORDER) for i in range(4)],
+            "wkb": [sum(t[d]["wk"][i] for d in DISP_ORDER) for i in range(NUM_WEEKS)],
             "short": short_units, "items": short_items,
         }
         info[l["code"]]["book"] = sum(info[l["code"]]["wkb"])
@@ -1001,8 +1000,8 @@ def build_email_html(model) -> str:
     th = "style='%sfont-size:11px;font-weight:bold;color:#FFFFFF;padding:6px 8px;border:1px solid #D5DDE6'" % FONT
     hdr = ("<tr bgcolor='#6B7280'>" + "".join(f"<td align='center' {th}>{h}</td>" for h in (
         ["Location", "Zone", "Stock", "Overdue<br>pickup"]
-        + [f"WK{wk[i]}<br><span style='font-weight:normal;font-size:10px'>{wsp[i]}</span>" for i in range(4)]
-        + ["Booked<br>4 wks", "Short<br>(units)", "Status"])) + "</tr>")
+        + [f"WK{wk[i]}<br><span style='font-weight:normal;font-size:10px'>{wsp[i]}</span>" for i in range(NUM_WEEKS)]
+        + [f"Booked<br>{NUM_WEEKS} wks", "Short<br>(units)", "Status"])) + "</tr>")
     td = "style='%sfont-size:12px;padding:5px 8px;border:1px solid #D5DDE6;color:#222A33'" % FONT
     rows = []
     for l in srt:
@@ -1018,7 +1017,7 @@ def build_email_html(model) -> str:
             + f"<td align='center' bgcolor='{'#C22A2A' if bad else '#1E8E5A'}' style='{FONT}font-size:10px;font-weight:bold;"
             f"color:#FFFFFF;padding:5px 8px;border:1px solid #D5DDE6'>{'WATCH' if bad else 'OK'}</td></tr>")
     tot = lambda k: sum(info[l["code"]][k] for l in srt)
-    totw = [sum(info[l["code"]]["wkb"][i] for l in srt) for i in range(4)]
+    totw = [sum(info[l["code"]]["wkb"][i] for l in srt) for i in range(NUM_WEEKS)]
     tb = "style='%sfont-size:12px;font-weight:bold;padding:5px 8px;border:1px solid #D5DDE6'" % FONT
     rows.append(f"<tr bgcolor='#FFF6C8'><td {tb}>TOTAL</td><td {tb}></td><td align='center' {tb}>{tot('stock')}</td>"
                 f"<td align='center' {tb}>{tot('pend')}</td>" + "".join(f"<td align='center' {tb}>{v}</td>" for v in totw)
