@@ -3,10 +3,10 @@
 Usage: python make_email.py <M-D>        e.g. python make_email.py 10-22
 Needs <M-D>/Stock_Daily_<M-D>.model.json and .html (produced by build_stock_daily.py).
 
-The mail body is the user's Outlook signature/template "STOCK DAILY ON BKK & LCH" (Dear ..., EMPTY TO TH / HAL shared /
-EQ SPECIAL / INBOUND FULL / DEPOT STOCK BALANCE, Thanks & Best regards + company block) with a "Please find ..."
-line and the report inserted right under "DEPOT STOCK BALANCE". If the template file is missing, a plain
-Dear / Please find / Best regards wrapper is used instead.
+The mail body takes only two pieces of the user's Outlook template "STOCK DAILY ON BKK & LCH": the greeting
+(rewritten to "Dear      All concerned,") and the "Thanks & Best regards ..." signature + company block. Its header
+line and the EMPTY TO TH / HAL shared to SKR / EQ SPECIAL / INBOUND FULL / DEPOT STOCK BALANCE headings are dropped.
+In between: a "Please find ..." line and the report. If the template file is missing, a plain wrapper is used.
 """
 import importlib.util
 import json
@@ -39,14 +39,17 @@ block = please + inner
 
 if TEMPLATE.exists():
     tpl = TEMPLATE.read_bytes().decode("utf-8", "replace")
-    m = re.search(r"DEPOT\s+STOCK\s+BALANCE", tpl)
-    if not m:
-        raise SystemExit("template has no 'DEPOT STOCK BALANCE' line - not creating the draft")
-    end = tpl.index("</p>", m.end()) + 4
-    body = tpl[:end] + "<p style='" + P + "'>&nbsp;</p>" + block + tpl[end:]
+    dear = re.search(r"<p[^>]*>(?:(?!</p>).)*?Dear.*?</p>", tpl, re.S)
+    thanks = re.search(r"<p[^>]*>(?:(?!</p>).)*?Thanks", tpl, re.S)
+    if not dear or not thanks:
+        raise SystemExit("template has no Dear / Thanks paragraph - not creating the draft")
+    dear_p = dear.group(0).replace("CS Outbound and Sale team,", "All concerned,")
+    # template's header line and the EMPTY TO TH ... DEPOT STOCK BALANCE headings are dropped on purpose
+    body = dear_p + "<p style='" + P + "'>&nbsp;</p>" + block + "<p style='" + P + "'>&nbsp;</p>" + tpl[thanks.start():]
 else:
-    body = (f"<p style='{P}'>Dear all,</p><p style='{P}'>&nbsp;</p>{block}<p style='{P}'>&nbsp;</p>"
-            f"<p style='{P}'>Thanks &amp; Best regards,<br>Sirichai Prayochananon / Operation team</p>")
+    body = (f"<p style='{P}'>Dear&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; All concerned,</p><p style='{P}'>&nbsp;</p>{block}"
+            f"<p style='{P}'>&nbsp;</p><p style='{P}'>Thanks &amp; Best regards,<br>"
+            "Mr. Sirichai Prayochananon / Operation team</p>")
 
 page = ("<html><head><meta charset='utf-8'></head><body>" + body + "</body></html>")
 out = day / f"Email_{tag}.html"
