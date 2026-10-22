@@ -946,6 +946,162 @@ document.querySelectorAll('.controls button').forEach(function(b){{
     out.write_text(page, encoding="utf-8")
 
 
+def build_email_html(model) -> str:
+    """Outlook-safe body (tables + inline styles, no CSS grid/flex): title, Summary by location, BKK, LCH."""
+    E = html.escape
+    wk = model["iso_weeks"]
+    weeks = model["weeks"]
+    wsp = [_rng(*weeks[i]) for i in range(4)]
+    rdate = _md(model["date"]) + " " + model["date"][:4]
+    NAVY_, GREY, ZERO = "#0C2340", "#F3F5F8", "#A9B4C1"
+    FONT = "font-family:Segoe UI,Calibri,Arial,sans-serif;"
+
+    def tcol(d):
+        return "#1F4E9C" if d in RE_DISP else "#7A4B12" if d in OTFR_DISP else NAVY_
+
+    with_bkg = [l for l in model["locations"]
+                if l.get("has_booking", True) or l["key"] in ALWAYS_FULL_BLOCK]
+
+    def pill(txt, bad):
+        return (f"<td bgcolor='{'#C22A2A' if bad else '#1E8E5A'}' align='center' "
+                f"style='{FONT}color:#FFFFFF;font-size:10px;font-weight:bold;padding:2px 9px'>{txt}</td>")
+
+    # ---- per-location numbers (also drives the summary table) --------------
+    info = {}
+    for l in with_bkg:
+        t = l["types"]
+        short_items, short_units = [], 0
+        for d in DISP_ORDER:
+            mn = min(t[d]["av"])
+            if mn < 0:
+                first = next(i for i, v in enumerate(t[d]["av"]) if v < 0)
+                short_units += -mn
+                short_items.append((mn, f"{d} {mn} from WK{wk[first]} (by {_md(weeks[first][1])})"))
+        short_items.sort()
+        info[l["code"]] = {
+            "stock": sum(t[d]["stock"] for d in DISP_ORDER),
+            "pend": sum(t[d]["pending"] for d in DISP_ORDER),
+            "wkb": [sum(t[d]["wk"][i] for d in DISP_ORDER) for i in range(4)],
+            "short": short_units, "items": short_items,
+        }
+        info[l["code"]]["book"] = sum(info[l["code"]]["wkb"])
+
+    def sec_head(title, sub):
+        return (f"<tr><td style='{FONT}padding:22px 0 6px 0'><span style='font-size:17px;font-weight:bold;color:{NAVY_}'>"
+                f"{title}</span> <span style='font-size:12px;color:#5B6B7B'>{sub}</span></td></tr>")
+
+    # ---- summary table -----------------------------------------------------
+    loc_idx = {l["code"]: i for i, l in enumerate(model["locations"])}
+    srt = sorted(with_bkg, key=lambda l: (l["zone"] != "BKK",
+                                          HTML_SUMMARY_ORDER.index(l["code"]) if l["code"] in HTML_SUMMARY_ORDER else 99,
+                                          loc_idx[l["code"]]))
+    th = "style='%sfont-size:11px;font-weight:bold;color:#FFFFFF;padding:6px 8px;border:1px solid #D5DDE6'" % FONT
+    hdr = ("<tr bgcolor='#6B7280'>" + "".join(f"<td align='center' {th}>{h}</td>" for h in (
+        ["Location", "Zone", "Stock", "Overdue<br>pickup"]
+        + [f"WK{wk[i]}<br><span style='font-weight:normal;font-size:10px'>{wsp[i]}</span>" for i in range(4)]
+        + ["Booked<br>4 wks", "Short<br>(units)", "Status"])) + "</tr>")
+    td = "style='%sfont-size:12px;padding:5px 8px;border:1px solid #D5DDE6;color:#222A33'" % FONT
+    rows = []
+    for l in srt:
+        i = info[l["code"]]
+        bad = i["short"] > 0
+        rows.append(
+            f"<tr><td {td}><b>{E(l['code'])}</b></td><td align='center' {td}>{l['zone']}</td>"
+            f"<td align='center' {td}><b>{i['stock']}</b></td><td align='center' {td}>{i['pend']}</td>"
+            + "".join(f"<td align='center' {td}>{v}</td>" for v in i["wkb"])
+            + f"<td align='center' {td}><b>{i['book']}</b></td>"
+            f"<td align='center' {td}><span style='color:{'#C22A2A' if bad else '#222A33'};"
+            f"{'font-weight:bold' if bad else ''}'>{i['short']}</span></td>"
+            + f"<td align='center' bgcolor='{'#C22A2A' if bad else '#1E8E5A'}' style='{FONT}font-size:10px;font-weight:bold;"
+            f"color:#FFFFFF;padding:5px 8px;border:1px solid #D5DDE6'>{'WATCH' if bad else 'OK'}</td></tr>")
+    tot = lambda k: sum(info[l["code"]][k] for l in srt)
+    totw = [sum(info[l["code"]]["wkb"][i] for l in srt) for i in range(4)]
+    tb = "style='%sfont-size:12px;font-weight:bold;padding:5px 8px;border:1px solid #D5DDE6'" % FONT
+    rows.append(f"<tr bgcolor='#FFF6C8'><td {tb}>TOTAL</td><td {tb}></td><td align='center' {tb}>{tot('stock')}</td>"
+                f"<td align='center' {tb}>{tot('pend')}</td>" + "".join(f"<td align='center' {tb}>{v}</td>" for v in totw)
+                + f"<td align='center' {tb}>{tot('book')}</td><td align='center' {tb}>{tot('short')}</td><td {tb}></td></tr>")
+    summary = (f"<table cellpadding='0' cellspacing='0' border='0' style='border-collapse:collapse;width:100%'>{hdr}"
+               + "".join(rows) + "</table>")
+
+    # ---- location cards ------------------------------------------------------
+    def card(l):
+        t, i = l["types"], info[l["code"]]
+        bad = i["short"] > 0
+        W0, WT = 102, 28
+        c = "style='%sfont-size:11px;padding:3px 1px;border-bottom:1px solid #EEF1F5;%s'"
+        head_cells = "".join(
+            f"<td align='center' width='{WT}' style='{FONT}font-size:9px;font-weight:bold;color:{tcol(d)};padding:5px 0;white-space:nowrap'>{E(d)}</td>"
+            for d in DISP_ORDER)
+
+        def row(label, fn, bg=None, bold=False):
+            tds = ""
+            for d in DISP_ORDER:
+                v = fn(d)
+                col = "#C22A2A" if v < 0 else ZERO if v == 0 else tcol(d) if d in RE_DISP | OTFR_DISP else "#222A33"
+                wgt = "font-weight:bold;" if (v < 0 or bold) else ""
+                tds += (f"<td align='center' style='{FONT}font-size:11px;padding:3px 0;border-bottom:1px solid #EEF1F5;"
+                        f"color:{col};{wgt}'>{v}</td>")
+            b = f" bgcolor='{bg}'" if bg else ""
+            return (f"<tr{b}><td style='{FONT}font-size:10px;font-weight:bold;color:#5B6B7B;padding:3px 4px 3px 6px;"
+                    f"border-bottom:1px solid #EEF1F5;white-space:nowrap' width='{W0}'>{label}</td>{tds}</tr>")
+
+        body = [row("Stock empty", lambda d: t[d]["stock"], GREY, True),
+                row(f"Pending &middot; WK{wk[0]}", lambda d: t[d]["pending"])]
+        for k in range(4):
+            lab = f"WK{wk[k]}<br><span style='font-weight:normal;font-size:9px;color:#8793A1'>{wsp[k]}</span>"
+            body.append(row(lab, lambda d, k=k: t[d]["wk"][k]))
+            body.append(row(f"AV bal &middot; {_md(weeks[k][1])}", lambda d, k=k: t[d]["av"][k], "#FFF6C8", True))
+        if i["items"]:
+            remark = "<b>Remark:</b> &#9888; short &ndash; " + "; ".join(E(x[1]) for x in i["items"])
+            rbg, rcol = "#FDECEC", "#8E1F1F"
+        elif not (i["pend"] or i["book"]):
+            remark, rbg, rcol = "<b>Remark:</b> no active bookings in the next 4 weeks", "#EAF6EF", "#17724A"
+        else:
+            remark, rbg, rcol = "<b>Remark:</b> &#10004; enough stock for all bookings in the next 4 weeks", "#EAF6EF", "#17724A"
+        return (f"<table cellpadding='0' cellspacing='0' border='0' width='{W0 + WT * 9 + 2}' "
+                "style='border-collapse:collapse;border:1px solid #D5DDE6'>"
+                f"<tr bgcolor='{NAVY_}'><td colspan='9' style='{FONT}color:#FFFFFF;font-size:13px;font-weight:bold;padding:6px 8px'>"
+                f"{E(l['code'])}</td><td colspan='1' align='right' style='padding:4px 6px'>"
+                f"<table cellpadding='0' cellspacing='0' border='0'><tr>{pill('WATCH' if bad else 'OK', bad)}</tr></table></td></tr>"
+                f"<tr><td style='{FONT}font-size:10px;color:#5B6B7B;padding:5px 4px 5px 6px'>Type</td>{head_cells}</tr>"
+                + "".join(body)
+                + f"<tr bgcolor='{rbg}'><td colspan='10' style='{FONT}font-size:11px;color:{rcol};padding:6px 8px'>{remark}</td></tr></table>")
+
+    def zone_block(zid, zname):
+        zlocs = {l["code"]: l for l in with_bkg if l["zone"] == zid}
+        pref = HTML_CARD_ORDER.get(zid, [])
+        slots = [zlocs.get(c) for c in pref]
+        while slots and slots[-1] is None:
+            slots.pop()
+        slots += [l for c, l in zlocs.items() if c not in pref]
+        if not slots:
+            return ""
+        rows = []
+        for r0 in range(0, len(slots), 3):
+            chunk = slots[r0:r0 + 3]
+            chunk += [None] * (3 - len(chunk))
+            cells = []
+            for k, l in enumerate(chunk):
+                cells.append(f"<td valign='top' style='padding:0 {10 if k < 2 else 0}px 12px 0'>{card(l) if l else ''}</td>")
+            rows.append("<tr>" + "".join(cells) + "</tr>")
+        return (sec_head(zid, zname)
+                + f"<tr><td><table cellpadding='0' cellspacing='0' border='0'>{''.join(rows)}</table></td></tr>")
+
+    page = (
+        "<html><head><meta charset='utf-8'></head><body style='margin:0;padding:0'>"
+        f"<table cellpadding='0' cellspacing='0' border='0' style='{FONT}color:#222A33'>"
+        f"<tr><td bgcolor='{NAVY_}' style='{FONT}padding:14px 18px'>"
+        "<span style='color:#FFFFFF;font-size:20px;font-weight:bold'>Daily Container Stock vs Booking</span><br>"
+        f"<span style='color:#C7D2E0;font-size:12px'>Report date {rdate} &middot; empty stock on hand vs outstanding "
+        "bookings &middot; all 9 container types</span></td></tr>"
+        + sec_head("Summary by location", "stock, overdue pickup and bookings per week (all types)")
+        + f"<tr><td>{summary}</td></tr>"
+        + zone_block("BKK", "Bangkok area depots")
+        + zone_block("LCH", "Laem Chabang area depots")
+        + "</table></body></html>")
+    return page.encode("ascii", "xmlcharrefreplace").decode("ascii")
+
+
 def find_default_inputs():
     """Auto-pick the newest STAYING file, and ALL booking-like files, from input/.
 
