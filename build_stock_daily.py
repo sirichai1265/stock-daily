@@ -687,6 +687,45 @@ def _md(iso):
     return f"{d.day} {MONTHS[d.month - 1]}"
 
 
+ASSETS_DIR = FOLDER / "assets"   # logo.png + header.jpg (HEUNG A LINE logo and container photo), user-supplied 2026-10-23
+
+
+def banner_jpeg(width: int, height: int):
+    """Header banner (logo on white at left, container photo at right) as JPEG bytes; None if assets/PIL missing."""
+    logo_p, photo_p = ASSETS_DIR / "logo.png", ASSETS_DIR / "header.jpg"
+    if not (logo_p.exists() and photo_p.exists()):
+        return None
+    try:
+        import io
+        from PIL import Image, ImageChops
+    except ImportError:
+        return None
+    logo = Image.open(logo_p).convert("RGBA")
+    white = Image.new("RGBA", logo.size, (255, 255, 255, 255))
+    white.alpha_composite(logo)
+    logo = white.convert("RGB")
+    box = ImageChops.invert(logo.convert("L")).point(lambda v: 255 if v > 24 else 0).getbbox()
+    if box:
+        logo = logo.crop(box)
+    left_w, pad = int(width * 0.30), int(height * 0.14)
+    lh = height - 2 * pad
+    lw = int(logo.width * lh / logo.height)
+    if lw > left_w - 2 * pad:
+        lw = left_w - 2 * pad
+        lh = int(logo.height * lw / logo.width)
+    logo = logo.resize((lw, lh), Image.LANCZOS)
+    out = Image.new("RGB", (width, height), (255, 255, 255))
+    out.paste(logo, ((left_w - lw) // 2, (height - lh) // 2))
+    photo = Image.open(photo_p).convert("RGB")
+    rw = width - left_w
+    photo = photo.resize((rw, int(photo.height * rw / photo.width)), Image.LANCZOS)
+    top = max(0, min(photo.height - height, int(photo.height * 0.43) - height // 2))
+    out.paste(photo.crop((0, top, rw, top + height)), (left_w, 0))
+    buf = io.BytesIO()
+    out.save(buf, "JPEG", quality=82)
+    return buf.getvalue()
+
+
 def _rng(a, b):
     da, db = dt.date.fromisoformat(a), dt.date.fromisoformat(b)
     if da.month == db.month:
@@ -860,11 +899,17 @@ def build_html(model, out: Path):
     watch_locs = [l["code"] for l in model["locations"]
                   if min((l["types"][d]["av"][i] for d in DISP_ORDER for i in range(NUM_WEEKS)), default=0) < 0]
 
+    import base64
+    _bj = banner_jpeg(1920, 170)
+    banner_html = (f'<img class="banner" alt="HEUNG A LINE" src="data:image/jpeg;base64,'
+                   f'{base64.b64encode(_bj).decode()}">') if _bj else ""
+
     page = f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Daily Container Stock vs Booking · {rdate}</title>
 <style>
 :root{{--navy:#0C2340;--re:#1F4E9C;--otfr:#7A4B12;--av:#FFF6C8;--neg:#C22A2A;--ink:#222a33;--mute:#5b6b7b;--line:#d5dde6;--card:#f3f5f8}}
+.banner{{display:block;width:100%;height:auto}}
 *{{box-sizing:border-box}}body{{margin:0;font:14px/1.45 "Segoe UI",Calibri,system-ui,sans-serif;color:var(--ink);background:#eef1f5}}
 header{{background:var(--navy);color:#fff;padding:18px 26px}}
 header h1{{margin:0;font-size:20px}}header .sub{{color:#c7d2e0;font-size:12.5px;margin-top:4px}}
@@ -916,7 +961,7 @@ td.neg{{color:var(--neg);font-weight:700}}
 .hide{{display:none}}
 footer{{padding:14px 26px;color:var(--mute);font-size:11px}}
 </style></head><body>
-<header><h1>Daily Container Stock vs Booking</h1>
+{banner_html}<header><h1>Daily Container Stock vs Booking</h1>
 <div class="sub">Report date {rdate} · empty stock on hand vs outstanding bookings · all 9 container types</div></header>
 <div class="kpis">
   <div class="kpi"><b>{total_stock}</b><span>total empty stock (all types)</span></div>
@@ -948,7 +993,7 @@ document.querySelectorAll('.controls button').forEach(function(b){{
     out.write_text(page, encoding="utf-8")
 
 
-def build_email_html(model) -> str:
+def build_email_html(model, banner_src: str | None = None) -> str:
     """Outlook-safe body (tables + inline styles, no CSS grid/flex): title, Summary by location, BKK, LCH."""
     E = html.escape
     wk = model["iso_weeks"]
@@ -1092,7 +1137,9 @@ def build_email_html(model) -> str:
     page = (
         "<html><head><meta charset='utf-8'></head><body style='margin:0;padding:0'>"
         f"<table cellpadding='0' cellspacing='0' border='0' style='{FONT}color:#222A33'>"
-        f"<tr><td bgcolor='{NAVY_}' style='{FONT}padding:14px 18px'>"
+        + (f"<tr><td><img src='{banner_src}' width='1088' height='150' alt='HEUNG A LINE' "
+           "style='display:block;border:0'></td></tr>" if banner_src else "")
+        + f"<tr><td bgcolor='{NAVY_}' style='{FONT}padding:14px 18px'>"
         "<span style='color:#FFFFFF;font-size:20px;font-weight:bold'>Daily Container Stock vs Booking</span><br>"
         f"<span style='color:#C7D2E0;font-size:12px'>Report date {rdate} &middot; empty stock on hand vs outstanding "
         "bookings &middot; all 9 container types</span></td></tr>"

@@ -31,7 +31,11 @@ bsd = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(bsd)
 
 d = bsd._md(model["date"]) + " " + model["date"][:4]
-report = bsd.build_email_html(model)
+banner = bsd.banner_jpeg(1088, 150)
+banner_path = day / "Email_banner.jpg"
+if banner:
+    banner_path.write_bytes(banner)
+report = bsd.build_email_html(model, banner_src="cid:halbanner" if banner else None)
 inner = re.search(r"<body[^>]*>(.*)</body>", report, re.S).group(1)
 please = (f"<p style='{P}'>Please find the daily container stock vs booking as of {d} below "
           "(HTML file attached).</p><p style='" + P + "'>&nbsp;</p>")
@@ -57,4 +61,5 @@ out.write_text(page.encode("ascii", "xmlcharrefreplace").decode("ascii"), encodi
 subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
                 str(FOLDER / "make_outlook_draft.ps1"),
                 "-HtmlBody", str(out), "-Attach", str(day / f"Stock_Daily_{tag}.html"),
-                "-Subject", f"Daily Container Stock vs Booking - {d}", "-To", TO], check=True)
+                "-Subject", f"Daily Container Stock vs Booking - {d}", "-To", TO]
+               + (["-InlineImage", str(banner_path), "-Cid", "halbanner"] if banner else []), check=True)

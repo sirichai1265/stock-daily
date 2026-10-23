@@ -8,3 +8,6 @@ input/
 
 # Published dashboard (GitHub Pages) - intentionally public, user-confirmed
 !docs/index.html
+
+# company logo / photo used for the report header banner (embedded in the dashboard, not tracked raw)
+assets/
